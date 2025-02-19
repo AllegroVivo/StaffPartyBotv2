@@ -14,7 +14,7 @@ DEBUG = os.getenv("DEBUG") == "True"
 ################################################################################
 
 bot = StaffPartyBot(
-    description="Staff Party Bot!",
+    description="Staff Party Bot - Honk Honk!",
     intents=Intents.all(),
     debug_guilds=[
         955933227372122173,  # Bot Resources

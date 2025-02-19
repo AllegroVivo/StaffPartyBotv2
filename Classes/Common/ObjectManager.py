@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, List, Any, Optional
 from discord import Embed, Interaction, User
 
 if TYPE_CHECKING:
-    from Classes import GuildData, RentARaBot, ManagedObject
+    from Classes import GuildData, StaffPartyBot, ManagedObject
     from UI.Common import FroggeView
 ################################################################################
 
@@ -20,12 +20,12 @@ class ObjectManager(ABC):
         "_managed",
     )
 
-    MAX_ITEMS = 20
+    MAX_ITEMS = 80
 
 ################################################################################
-    def __init__(self, state: GuildData) -> None:
+    def __init__(self, state: StaffPartyBot) -> None:
 
-        self._state: GuildData = state
+        self._state: StaffPartyBot = state
         self._managed: List[ManagedObject] = []
 
 ################################################################################
@@ -46,21 +46,9 @@ class ObjectManager(ABC):
 
 ################################################################################
     @property
-    def bot(self) -> RentARaBot:
-
-        return self._state.bot
-
-################################################################################
-    @property
-    def guild(self) -> GuildData:
+    def bot(self) -> StaffPartyBot:
 
         return self._state
-
-################################################################################
-    @property
-    def guild_id(self) -> int:
-
-        return self._state.guild_id
 
 ################################################################################
     @abstractmethod

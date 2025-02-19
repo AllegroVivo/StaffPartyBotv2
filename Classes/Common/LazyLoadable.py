@@ -7,7 +7,7 @@ from discord import Message, Role, User, Member
 from discord.abc import GuildChannel
 
 if TYPE_CHECKING:
-    from Classes import GuildData, RentARaBot
+    from Classes import GuildData, StaffPartyBot
 ################################################################################
 
 __all__ = (
@@ -66,25 +66,25 @@ class LazyLoadable(Generic[T]):
 ################################################################################
     async def get(self) -> Optional[T]:
 
-        guild = getattr(self._parent, "guild", None)
-        assert guild is not None
+        bot = getattr(self._parent, "bot", None)
+        assert bot is not None
 
         if self._item is None and self._item_id is not None:
-            self._item = await self._fetch_item(guild)
+            self._item = await self._fetch_item(bot)
         return self._item
 
 ################################################################################
-    async def _fetch_item(self, guild: GuildData) -> T:
+    async def _fetch_item(self, bot: StaffPartyBot) -> T:
 
         match self._item_type:
             case LazyLoadableType.Role:
-                action = guild.get_or_fetch_role
+                action = bot.get_or_fetch_role
             case LazyLoadableType.User:
-                action = guild.get_or_fetch_member_or_user
+                action = bot.get_or_fetch_member_or_user
             case LazyLoadableType.Channel:
-                action = guild.get_or_fetch_channel
+                action = bot.get_or_fetch_channel
             case LazyLoadableType.Message:
-                action = guild.get_or_fetch_message
+                action = bot.get_or_fetch_message
             case _:
                 raise NotImplementedError(f"LazyLoadableType: {self._item_type} not implemented")
 
