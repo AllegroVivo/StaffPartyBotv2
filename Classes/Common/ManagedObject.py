@@ -12,7 +12,7 @@ from Utilities import Utilities as U
 from .Identifiable import Identifiable
 
 if TYPE_CHECKING:
-    from Classes import ObjectManager, RentARaBot, GuildData
+    from Classes import ObjectManager, StaffPartyBot, GuildData
     from UI.Common import FroggeView
 ################################################################################
 
@@ -35,7 +35,7 @@ class ManagedObject(Identifiable, FroggeObject):
 
 ################################################################################
     @property
-    def bot(self) -> RentARaBot:
+    def bot(self) -> StaffPartyBot:
 
         return self._mgr.bot
 

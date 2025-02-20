@@ -47,3 +47,8 @@ class DatabaseUpdater:
                 raise e
 
 ################################################################################
+    def venue(self, v: Venue) -> None:
+
+        self._update_record(Models.VenueModel, v.to_dict(), id=v.id)
+
+################################################################################

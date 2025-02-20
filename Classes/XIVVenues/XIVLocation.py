@@ -14,7 +14,7 @@ class XIVLocation:
 
     data_center: str
     world: str
-    district: str
+    zone: str
     ward: int
     plot: int
     apartment: int
@@ -30,7 +30,7 @@ class XIVLocation:
         return cls(
             data_center=data.get("dataCenter"),
             world=data.get("world"),
-            district=data.get("district"),
+            zone=data.get("zone"),
             ward=data.get("ward"),
             plot=data.get("plot"),
             apartment=data.get("apartment"),

@@ -39,7 +39,6 @@ class VenueModel(Base):
     mare_id = Column(String, nullable=True)
     mare_password = Column(String, nullable=True)
     hiring = Column(Boolean, nullable=False, server_default="true")
-    pending = Column(Boolean, nullable=False, server_default="true")
     nsfw = Column(Boolean, nullable=False, server_default="false")
     data_center = Column(Integer, nullable=True)
     world = Column(Integer, nullable=True)

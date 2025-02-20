@@ -36,3 +36,21 @@ class VenueURLs:
         self._app_url: Optional[str] = kwargs.get("app_url")
 
 ################################################################################
+    def to_dict(self) -> Dict[str, Any]:
+
+        return {
+            "discord_url": self._discord_url,
+            "website_url": self._website_url,
+            "logo_url": self._logo_url,
+            "banner_url": self._banner_url,
+            "app_url": self._app_url
+        }
+
+################################################################################
+    def update_from_xiv_venue(self, xiv_venue: XIVVenue) -> None:
+
+        self._discord_url = xiv_venue.discord
+        self._website_url = xiv_venue.website
+        self._banner_url = xiv_venue.banner
+
+################################################################################

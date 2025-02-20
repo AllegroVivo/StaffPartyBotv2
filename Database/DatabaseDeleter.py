@@ -40,3 +40,8 @@ class DatabaseDeleter:
                 raise e
 
 ################################################################################
+    def venue_hours(self, hours_id: int) -> None:
+
+        self._delete_record(Models.VenueScheduleModel, hours_id)
+
+################################################################################

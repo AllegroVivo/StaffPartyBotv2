@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type, TypeVar, Any, Dict
 
 from Classes.Common import Identifiable
 from Enums import Weekday
 
 if TYPE_CHECKING:
-    from Classes import Venue
+    from Classes import Venue, StaffPartyBot
 ################################################################################
 
 __all__ = ("VenueHours", )
+
+VH = TypeVar("VH", bound="VenueHours")
 
 ################################################################################
 class VenueHours(Identifiable):
@@ -41,5 +43,22 @@ class VenueHours(Identifiable):
         self._close_minute: int = kwargs.pop("close_minute")
         self._interval_type: int = kwargs.pop("interval_type")
         self._interval_arg: int = kwargs.pop("interval_arg")
+
+################################################################################
+    @classmethod
+    def from_xiv_schedule(cls: Type[VH], parent: Venue, data: Dict[str, Any]) -> VH:
+
+        new_data = parent.bot.db.insert.venue_schedule()
+
+################################################################################
+    @property
+    def bot(self) -> StaffPartyBot:
+
+        return self._parent.bot
+
+################################################################################
+    def delete(self) -> None:
+
+        self.bot.db.delete.venue_hours(self.id)
 
 ################################################################################

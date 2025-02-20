@@ -169,10 +169,7 @@ class VenueManager(ObjectManager):
             return
 
         xiv_venue = results[0]
-        xiv_venue["xiv_id"] = xiv_venue["id"]
-
-
-        venue = await Venue.new(self, xiv_venue.name, interaction)
+        venue = await Venue.new(self, xiv_venue, interaction)
         self._managed.append(venue)
 
         await self.bot.log.venue_created(venue)
