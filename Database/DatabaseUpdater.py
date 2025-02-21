@@ -52,3 +52,13 @@ class DatabaseUpdater:
         self._update_record(Models.VenueModel, v.to_dict(), id=v.id)
 
 ################################################################################
+    def venue_hours(self, vh: VenueHours) -> None:
+
+        self._update_record(Models.VenueScheduleModel, vh.to_dict(), id=vh.id)
+
+################################################################################
+    def top_level(self, top_level_obj: Any) -> None:
+
+        self._update_record(Models.TopLevelDataModel, top_level_obj.to_dict(), id=1)
+
+################################################################################

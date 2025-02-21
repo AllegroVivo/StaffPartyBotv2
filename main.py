@@ -18,7 +18,8 @@ bot = StaffPartyBot(
     intents=Intents.all(),
     debug_guilds=[
         955933227372122173,  # Bot Resources
-        1104515062187708525,  # Staff Party Bus
+        # 1104515062187708525,  # Staff Party Bus
+        1273061765831458866,  # Kupo Nutz
     ] if DEBUG else None
 )
 

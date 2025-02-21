@@ -6,9 +6,9 @@ from discord import (
     SlashCommandGroup,
     Option,
     SlashCommandOptionType,
-    OptionChoice,
-    guild_only,
+    InteractionContextType
 )
+from ._test import test_api_data_parsing
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot
@@ -24,7 +24,7 @@ class Venues(Cog):
     venues = SlashCommandGroup(
         name="venue",
         description="Commands for venue- and internship-related tasks and queries.",
-        guild_only=True
+        contexts=[InteractionContextType.guild]
     )
 
 ################################################################################
@@ -32,7 +32,6 @@ class Venues(Cog):
         name="import",
         description="Import a venue from the FFXIV Venues API."
     )
-    @guild_only()
     async def venue_import(
         self,
         ctx: ApplicationContext,
@@ -45,5 +44,18 @@ class Venues(Cog):
     ) -> None:
 
         await self.bot.venue_manager.import_venue(ctx.interaction, name)
+
+################################################################################
+    @venues.command(name="test")
+    async def test_cmd(self, ctx: ApplicationContext) -> None:
+
+        await ctx.interaction.response.defer()
+        await test_api_data_parsing(self.bot)
+        await ctx.respond("Test complete.")
+
+################################################################################
+def setup(bot: "StaffPartyBot") -> None:
+
+    bot.add_cog(Venues(bot))
 
 ################################################################################

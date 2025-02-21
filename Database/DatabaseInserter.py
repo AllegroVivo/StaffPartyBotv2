@@ -69,3 +69,17 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating venue: {str(e)}")
 
 ################################################################################
+    def venue_schedule(self, venue_id: int) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_schedule = VenueScheduleModel(venue_id=venue_id)
+                db.add(new_schedule)
+                db.commit()
+                db.refresh(new_schedule)
+                return VenueScheduleSchema.model_validate(new_schedule).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating venue schedule: {str(e)}")
+
+################################################################################

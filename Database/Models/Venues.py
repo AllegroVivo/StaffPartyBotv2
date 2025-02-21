@@ -32,6 +32,7 @@ class VenueModel(Base):
 
     __tablename__ = "venues"
 
+    top_level_id = Column(Integer, ForeignKey("top_level.id", name="venues_top_level_fkey", ondelete="CASCADE"), nullable=False, server_default="1")
     id = Column(Integer, primary_key=True)
     xiv_id = Column(String, nullable=False)
     name = Column(String, nullable=False)
@@ -61,6 +62,7 @@ class VenueModel(Base):
     post_url = Column(String, nullable=True)
 
     # Relationships
+    top_level = relationship("TopLevelDataModel", back_populates="venues")
     schedules = relationship("VenueScheduleModel", back_populates="venue", passive_deletes=True)
 
 ################################################################################

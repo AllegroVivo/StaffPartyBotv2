@@ -22,8 +22,9 @@ class TopLevelDataModel(Base):
 
     id = Column(Integer, primary_key=True)
     venue_channel_id = Column(BigInteger, nullable=True)
+    log_channel_id = Column(BigInteger, nullable=True)
 
     # Relationships
-    config = relationship("TopLevelConfigModel", back_populates="master", passive_deletes=True)
+    venues = relationship("VenueModel", back_populates="top_level", passive_deletes=True)
 
 ################################################################################

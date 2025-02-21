@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 from discord import Guild
 
@@ -23,6 +23,11 @@ class GuildData:
 
         self._state: StaffPartyBot = bot
         self._parent: Guild = parent
+
+################################################################################
+    async def load_all(self, payload: Dict[str, Any]) -> None:
+
+        pass
 
 ################################################################################
     @property

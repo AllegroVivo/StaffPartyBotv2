@@ -34,7 +34,6 @@ class VenueSchema(BaseModel):
     mare_id: Optional[str]
     mare_password: Optional[str]
     hiring: bool
-    pending: bool
     nsfw: bool
     data_center: Optional[int]
     world: Optional[int]

@@ -32,8 +32,14 @@ class VenueManager(ObjectManager):
 ################################################################################
     async def load_all(self, payload: Dict[str, Any]) -> None:
 
-        self._managed = [Venue(self, *v) for v in payload["venues"]]
+        self._managed = [Venue(self, **v) for v in payload["venues"]]
         self._post_channel = LazyChannel(self, payload["post_channel_id"])
+
+################################################################################
+    async def finalize_load(self) -> None:
+
+        for venue in self._managed:
+            await venue.update_post_components(status=False)
 
 ################################################################################
     @property
@@ -78,7 +84,14 @@ class VenueManager(ObjectManager):
         pass
 
 ################################################################################
-    async def import_venue(self, interaction: Interaction, name: str) -> None:
+    def get_venue(self, name: str) -> Optional[Venue]:
+
+        return next((v for v in self._managed if v.name.lower() == name.lower()), None)
+
+################################################################################
+    async def import_venue(
+        self, interaction: Interaction, name: str, admin_user: Optional[User]
+    ) -> None:
 
         exists = self.get_venue(name)
         if exists:
@@ -95,8 +108,9 @@ class VenueManager(ObjectManager):
             title="Confirm Venue Import",
             description=(
                 "The following venue information will be imported from your "
-                "XIV Venues listing into this server, so long as your Discord "
-                "user is listed as a manager for the venue.\n\n"
+                f"XIV Venues listing into this server, "
+                f"so long as {'the provided' if admin_user else 'your'} "
+                "Discord user is listed as a manager on the venue.\n\n"
 
                 "* Manager List\n"
                 "* Banner Image\n"
@@ -125,9 +139,10 @@ class VenueManager(ObjectManager):
 
         msg = await interaction.followup.send("Please wait...")
 
+        user_to_get = admin_user or interaction.user
         results = [
             v for v in
-            await self.bot.xiv_client.get_venues_by_manager(interaction.user.id)
+            self.bot.xiv_client.get_venues_by_manager(user_to_get.id)
             if v.name.lower() == name.lower()
         ]
 
@@ -139,18 +154,20 @@ class VenueManager(ObjectManager):
                 message=(
                     "An error occurred while attempting to import the venue.\n\n"
 
-                    "Either there are no venues with you listed as a manager on "
-                    "the XIV Venues API, **or** there is no venue that you manage "
-                    "that has the name you provided."
+                    f"Either there are no venues with {'that user' if admin_user else 'you'} "
+                    f"listed as a manager on the XIV Venues API, **or** there is no venue "
+                    f"that is managed by {'that user' if admin_user else 'you'} with has "
+                    f"the name you provided."
                 ),
                 solution=(
-                    "If you are not listed as a manager for any venues on the XIV "
-                    "Venues API, you will need to contact them to have yourself "
-                    "added as a manager.\n\n"
+                    f"If {'that user is' if admin_user else 'you are'} not listed as a "
+                    f"manager for any venues on the XIV Venues API, you will need to "
+                    f"contact them to have {'that person' if admin_user else 'yourself'} "
+                    f"added as a manager.\n\n"
 
-                    "If you are listed as a manager for a venue, but the venue "
-                    "was not found, please ensure that you have entered the name "
-                    "of the venue correctly."
+                    f"If {'that user is' if admin_user else 'you are'} are listed as "
+                    f"a manager for a venue, but the venue was not found, please ensure "
+                    f"that you have entered the name of the venue correctly."
                 )
             )
             await interaction.respond(embed=error, ephemeral=True)
@@ -161,20 +178,19 @@ class VenueManager(ObjectManager):
                 title="Unable to Import Venue",
                 message=(
                     "More than one venue was found with the name you provided "
-                    "that falls under your management."
+                    f"that falls under {'the given' if admin_user else 'your'} management."
                 ),
                 solution="Please contact the bot owner for assistance."
             )
             await interaction.respond(embed=error, ephemeral=True)
             return
 
-        xiv_venue = results[0]
-        venue = await Venue.new(self, xiv_venue, interaction)
+        venue = await Venue.new(self, results[0])
         self._managed.append(venue)
 
         await self.bot.log.venue_created(venue)
 
-        await venue.post(interaction, self.post_channel, True)
+        await venue.post(interaction, await self.post_channel, True)
         await venue.menu(interaction)
 
 ################################################################################

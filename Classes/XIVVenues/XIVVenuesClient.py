@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -21,14 +21,7 @@ class XIVVenuesClient:
         "_state",
     )
 
-    load_dotenv()
-    DEBUG = os.getenv("DEBUG") == "True"
-
-    if DEBUG:
-        # URL_BASE = "https://api.ffxivvenues.dev/venue"
-        URL_BASE = "https://api.ffxivvenues.com/venue"
-    else:
-        URL_BASE = "https://api.ffxivvenues.com/venue"
+    URL_BASE = "https://api.ffxivvenues.com/venue"
 
 ################################################################################
     def __init__(self, state: StaffPartyBot):
@@ -36,11 +29,11 @@ class XIVVenuesClient:
         self._state: StaffPartyBot = state
 
 ################################################################################
-    async def get_venues_by_manager(self, manager_id: int) -> List[XIVVenue]:
+    def get_venues_by_manager(self, manager_id: int) -> List[XIVVenue]:
 
         query = self.URL_BASE + "?manager=" + str(manager_id)
 
-        if self.DEBUG:
+        if self._state.DEBUG:
             print("Executing XIVClient query: " + query)
 
         response = requests.get(query)
@@ -51,18 +44,17 @@ class XIVVenuesClient:
                 str(response.status_code)
             )
 
-        if self.DEBUG:
+        if self._state.DEBUG:
             print("Response: " + str(response.json()))
 
         return [XIVVenue.from_data(venue) for venue in response.json()]
 
 ################################################################################
-    async def get_venues_by_name(self, name: str) -> List[XIVVenue]:
+    def get_venue_by_id(self, name: str) -> Optional[XIVVenue]:
 
         query = self.URL_BASE + "?search=" + str(name)
 
-        load_dotenv()
-        if os.getenv("DEBUG") == "True":
+        if self._state.DEBUG:
             print("Executing XIVClient query: " + query)
 
         response = requests.get(query)
@@ -73,15 +65,14 @@ class XIVVenuesClient:
                 str(response.status_code)
             )
 
-        if os.getenv("DEBUG") == "True":
+        if self._state.DEBUG:
             print("Response: " + str(response.json()))
 
-        ret = []
+        js = response.json()
+        if "status" in js and js["status"] == 404:
+            return None
 
-        for venue in response.json():
-            ret.append(XIVVenue.from_data(venue))
-
-        return ret
+        return XIVVenue.from_data(js)
 
 ################################################################################
     async def get_all_venues(self) -> List[XIVVenue]:

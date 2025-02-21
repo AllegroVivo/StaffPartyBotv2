@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Engine
@@ -90,9 +90,9 @@ class Database:
             db.close()
 
 ################################################################################
-    def load_guilds(self) -> List[Dict[str, Any]]:
+    def load_guilds(self) -> Optional[Dict[str, Any]]:
 
-        return self._loader.load_guilds()
+        return self._loader.load_all()
 
 ################################################################################
     def fetch_guild(self, guild_id: int) -> bool:

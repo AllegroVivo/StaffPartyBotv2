@@ -11,6 +11,7 @@ from Classes.XIVVenues.XIVVenuesClient import XIVVenuesClient
 from Database.Database import Database
 from .GuildManager import GuildManager
 from Classes.Venues.VenueManager import VenueManager
+from .SPBLogger import SPBLogger
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -27,13 +28,14 @@ class StaffPartyBot(Bot):
         "_db",
         "_xiv_client",
         "_venue_mgr",
+        "_logger",
     )
 
     IMAGE_DUMP = 991902526188302427
     SPB_ID = 1104515062187708525
 
     load_dotenv()
-    DEBUG = os.getenv("DEBUG")
+    DEBUG = os.getenv("DEBUG") == "True"
 
 ################################################################################
     def __init__(self, *args, **kwargs) -> None:
@@ -45,6 +47,7 @@ class StaffPartyBot(Bot):
         self._guild_mgr: GuildManager = GuildManager(self)
         self._db: Database = Database(self)
         self._xiv_client: XIVVenuesClient = XIVVenuesClient(self)
+        self._logger: SPBLogger = SPBLogger(self)
 
         self._venue_mgr: VenueManager = VenueManager(self)
 
@@ -60,32 +63,42 @@ class StaffPartyBot(Bot):
         self._img_dump = await self.fetch_channel(self.IMAGE_DUMP)
         print("Dump channels loaded.")
 
+        payload = self.db.load_guilds()
+        if not payload:
+            raise Exception("No guild data found in the database.")
+
+        print("Initializing logger...")
+        await self._logger.load_all(payload["logger"])
+
         print("Initializing guilds data...")
-        await self._load_guilds()
+        # guild_ids = []
+        # for guild in self.guilds:
+        #     await self._guild_mgr.init_guild(guild)
+        #     guild_ids.append(guild.id)
+        #
+        # for data in payload["guilds"]:
+        #     guild_data = self[data["id"]]
+        #     if guild_data is None:
+        #         continue
+        #     await guild_data.load_all(data["data"])
+        #     guild_ids.remove(guild_data.guild_id)
+        #
+        # # Add any new guilds to the database
+        # for gid in guild_ids:
+        #     self.db.insert.guild(self.get_guild(gid))
+
+        print("Initializing venues data...")
+        await self._venue_mgr.load_all(payload["venue_manager"])
+
+        print("Finalizing Load in All Modules...")
+        await self._finalize_load()
 
         print("Done!")
 
 ################################################################################
-    async def _load_guilds(self) -> None:
-        """Initialize guilds and synchronize with the database."""
+    async def _finalize_load(self) -> None:
 
-        guild_ids = []
-        for guild in self.guilds:
-            await self._guild_mgr.init_guild(guild)
-            guild_ids.append(guild.id)
-
-        guild_payload = self.db.load_guilds()
-
-        for data in guild_payload:
-            guild_data = self[data["id"]]
-            if guild_data is None:
-                continue
-            await guild_data.load_all(data["data"])
-            guild_ids.remove(guild_data.guild_id)
-
-        # Add any new guilds to the database
-        for gid in guild_ids:
-            self.db.insert.guild(self.get_guild(gid))
+        await self._venue_mgr.finalize_load()
 
 ################################################################################
     @property
@@ -110,6 +123,12 @@ class StaffPartyBot(Bot):
     def venue_manager(self) -> VenueManager:
 
         return self._venue_mgr
+
+################################################################################
+    @property
+    def log(self) -> SPBLogger:
+
+        return self._logger
 
 ################################################################################
     async def dump_image(self, image: Attachment) -> str:

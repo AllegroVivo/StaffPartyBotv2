@@ -7,7 +7,6 @@ from enum import Enum
 from typing import Any, List, Optional, Tuple, Union, Literal, TYPE_CHECKING
 
 import emoji
-import pytz
 from discord import (
     Colour,
     Embed,
@@ -29,7 +28,7 @@ from .ErrorMessage import ErrorMessage
 from UI.Common.FroggeMultiMenuSelect import FroggeMultiMenuSelect
 
 if TYPE_CHECKING:
-    from Classes import GuildData
+    from Classes import GuildData, StaffPartyBot
 ################################################################################
 
 __all__ = ("Utilities", )
@@ -40,31 +39,31 @@ TimestampStyle = Literal["f", "F", "d", "D", "t", "T", "R"]
 class Utilities:
     """A collection of utility functions for use in various parts of the bot."""
 
-    TIMEZONE_OFFSETS = {
-        Timezone.MIT: pytz.timezone('Pacific/Midway'),
-        Timezone.HST: pytz.timezone('Pacific/Honolulu'),
-        Timezone.AST: pytz.timezone('US/Alaska'),
-        Timezone.PST: pytz.timezone('US/Pacific'),
-        Timezone.MST: pytz.timezone('US/Mountain'),
-        Timezone.CST: pytz.timezone('US/Central'),
-        Timezone.EST: pytz.timezone('US/Eastern'),
-        Timezone.PRT: pytz.timezone('America/Puerto_Rico'),
-        Timezone.AGT: pytz.timezone('America/Argentina/Buenos_Aires'),
-        Timezone.CAT: pytz.timezone('Africa/Harare'),
-        Timezone.UTC: pytz.timezone('UTC'),
-        Timezone.ECT: pytz.timezone('Europe/Paris'),
-        Timezone.EET: pytz.timezone('Europe/Bucharest'),
-        Timezone.EAT: pytz.timezone('Africa/Nairobi'),
-        Timezone.NET: pytz.timezone('Asia/Yerevan'),
-        Timezone.PLT: pytz.timezone('Asia/Karachi'),
-        Timezone.BST: pytz.timezone('Asia/Dhaka'),
-        Timezone.VST: pytz.timezone('Asia/Ho_Chi_Minh'),
-        Timezone.CTT: pytz.timezone('Asia/Shanghai'),
-        Timezone.JST: pytz.timezone('Asia/Tokyo'),
-        Timezone.AET: pytz.timezone('Australia/Sydney'),
-        Timezone.SST: pytz.timezone('Pacific/Guadalcanal'),
-        Timezone.NST: pytz.timezone('Pacific/Auckland'),
-    }
+    # TIMEZONE_OFFSETS = {
+    #     Timezone.MIT: pytz.timezone('Pacific/Midway'),
+    #     Timezone.HST: pytz.timezone('Pacific/Honolulu'),
+    #     Timezone.AST: pytz.timezone('US/Alaska'),
+    #     Timezone.PST: pytz.timezone('US/Pacific'),
+    #     Timezone.MST: pytz.timezone('US/Mountain'),
+    #     Timezone.CST: pytz.timezone('US/Central'),
+    #     Timezone.EST: pytz.timezone('US/Eastern'),
+    #     Timezone.PRT: pytz.timezone('America/Puerto_Rico'),
+    #     Timezone.AGT: pytz.timezone('America/Argentina/Buenos_Aires'),
+    #     Timezone.CAT: pytz.timezone('Africa/Harare'),
+    #     Timezone.UTC: pytz.timezone('UTC'),
+    #     Timezone.ECT: pytz.timezone('Europe/Paris'),
+    #     Timezone.EET: pytz.timezone('Europe/Bucharest'),
+    #     Timezone.EAT: pytz.timezone('Africa/Nairobi'),
+    #     Timezone.NET: pytz.timezone('Asia/Yerevan'),
+    #     Timezone.PLT: pytz.timezone('Asia/Karachi'),
+    #     Timezone.BST: pytz.timezone('Asia/Dhaka'),
+    #     Timezone.VST: pytz.timezone('Asia/Ho_Chi_Minh'),
+    #     Timezone.CTT: pytz.timezone('Asia/Shanghai'),
+    #     Timezone.JST: pytz.timezone('Asia/Tokyo'),
+    #     Timezone.AET: pytz.timezone('Australia/Sydney'),
+    #     Timezone.SST: pytz.timezone('Pacific/Guadalcanal'),
+    #     Timezone.NST: pytz.timezone('Pacific/Auckland'),
+    # }
 
 ################################################################################
     @staticmethod
@@ -623,14 +622,14 @@ class Utilities:
     @staticmethod
     async def select_channel(
         interaction: Interaction,
-        guild: GuildData,
+        bot: StaffPartyBot,
         channel_type: str,
         channel_prompt: Optional[Embed] = None,
         restrictions: Optional[List[ChannelType]] = None,
         exceptions: Optional[List[GuildChannel]] = None
     ) -> Optional[Union[TextChannel, ForumChannel]]:
 
-        channels = sorted(guild.parent.channels, key=lambda c: c.position)
+        channels = sorted(interaction.guild.channels, key=lambda c: c.position)
         options = [
             SelectOption(
                 label=channel.name,
@@ -656,7 +655,7 @@ class Utilities:
             return None
 
         category_id = int(view.value)
-        category = await guild.get_or_fetch_channel(category_id)
+        category = await bot.get_or_fetch_channel(category_id)
 
         if not category:
             error = Utilities.make_embed(
@@ -692,7 +691,7 @@ class Utilities:
             return None
 
         channel_id = int(view.value)
-        return await guild.get_or_fetch_channel(channel_id)
+        return await bot.get_or_fetch_channel(channel_id)
 
 ################################################################################
     @staticmethod
@@ -762,8 +761,10 @@ class Utilities:
     @staticmethod
     def yes_no_emoji(value: Any, _old_check: bool = False) -> str:
 
-        if _old_check:
-            return str(BotEmojis.Check if value else BotEmojis.Cross)
-        return str(BotEmojis.CheckGreen if value else BotEmojis.Cross)
+        return str(
+            (BotEmojis.CheckGreen if not _old_check else BotEmojis.Check)
+            if value
+            else BotEmojis.Cross
+        )
 
 ################################################################################
