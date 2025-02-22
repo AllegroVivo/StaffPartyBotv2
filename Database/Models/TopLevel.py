@@ -26,5 +26,6 @@ class TopLevelDataModel(Base):
 
     # Relationships
     venues = relationship("VenueModel", back_populates="top_level", passive_deletes=True)
+    positions = relationship("PositionModel", back_populates="top_level", passive_deletes=True)
 
 ################################################################################

@@ -548,22 +548,27 @@ class Venue(ManagedObject):
             return
 
         self.rp_level = RPLevel(int(view.value))
+        await self.update_post_components(True)
 
 ################################################################################
     async def toggle_hiring(self, interaction: Interaction) -> None:
 
         self.hiring = not self.hiring
+
         await interaction.edit()
+        await self.update_post_components(True)
 
 ################################################################################
     async def set_logo(self, interaction: Interaction) -> None:
 
         await self._urls.set_logo(interaction)
+        await self.update_post_components(True)
 
 ################################################################################
     async def set_application_url(self, interaction: Interaction) -> None:
 
         await self._urls.set_application_url(interaction)
+        await self.update_post_components(True)
 
 ################################################################################
     async def set_positions(self, interaction: Interaction) -> None:

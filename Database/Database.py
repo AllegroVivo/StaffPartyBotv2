@@ -90,7 +90,7 @@ class Database:
             db.close()
 
 ################################################################################
-    def load_guilds(self) -> Optional[Dict[str, Any]]:
+    def load_all(self) -> Optional[Dict[str, Any]]:
 
         return self._loader.load_all()
 

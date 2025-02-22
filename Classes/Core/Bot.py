@@ -12,6 +12,7 @@ from Database.Database import Database
 from .GuildManager import GuildManager
 from Classes.Venues.VenueManager import VenueManager
 from .SPBLogger import SPBLogger
+from Classes.Positions.PositionManager import PositionManager
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -29,6 +30,7 @@ class StaffPartyBot(Bot):
         "_xiv_client",
         "_venue_mgr",
         "_logger",
+        "_position_mgr",
     )
 
     IMAGE_DUMP = 991902526188302427
@@ -49,6 +51,7 @@ class StaffPartyBot(Bot):
         self._xiv_client: XIVVenuesClient = XIVVenuesClient(self)
         self._logger: SPBLogger = SPBLogger(self)
 
+        self._position_mgr: PositionManager = PositionManager(self)
         self._venue_mgr: VenueManager = VenueManager(self)
 
 ################################################################################
@@ -63,7 +66,7 @@ class StaffPartyBot(Bot):
         self._img_dump = await self.fetch_channel(self.IMAGE_DUMP)
         print("Dump channels loaded.")
 
-        payload = self.db.load_guilds()
+        payload = self.db.load_all()
         if not payload:
             raise Exception("No guild data found in the database.")
 
@@ -88,6 +91,7 @@ class StaffPartyBot(Bot):
         #     self.db.insert.guild(self.get_guild(gid))
 
         print("Initializing venues data...")
+        await self._position_mgr.load_all(payload["position_manager"])
         await self._venue_mgr.load_all(payload["venue_manager"])
 
         print("Finalizing Load in All Modules...")
@@ -98,6 +102,7 @@ class StaffPartyBot(Bot):
 ################################################################################
     async def _finalize_load(self) -> None:
 
+        self._position_mgr.finalize_load()
         await self._venue_mgr.finalize_load()
 
 ################################################################################

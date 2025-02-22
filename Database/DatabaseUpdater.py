@@ -62,3 +62,8 @@ class DatabaseUpdater:
         self._update_record(Models.TopLevelDataModel, top_level_obj.to_dict(), id=1)
 
 ################################################################################
+    def position(self, pos: Position) -> None:
+
+        self._update_record(Models.PositionModel, pos.to_dict(), id=pos.id)
+
+################################################################################
