@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from discord import Embed, Colour
+from discord import Embed, Colour, Interaction
 
 from Assets import BotImages
 ################################################################################
@@ -45,4 +45,8 @@ class ErrorMessage(Embed):
         self.set_thumbnail(url=BotImages.ErrorFrog)
         
 ################################################################################
-        
+    async def send(self, interaction: Interaction) -> None:
+
+        await interaction.respond(embed=self, ephemeral=True)
+
+################################################################################

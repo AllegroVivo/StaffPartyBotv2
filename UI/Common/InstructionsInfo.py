@@ -8,8 +8,8 @@ __all__ = ("InstructionsInfo",)
 @dataclass
 class InstructionsInfo:
 
-    title: Optional[str]
     placeholder: str
     value: str
+    title: Optional[str] = None
 
 ################################################################################

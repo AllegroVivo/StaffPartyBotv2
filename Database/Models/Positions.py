@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from .Base import Base
 ################################################################################
 
-__all__ = ("RequirementModel", "PositionsModel")
+__all__ = ("RequirementModel", "PositionModel")
 
 ################################################################################
 class RequirementModel(Base):
@@ -16,17 +16,16 @@ class RequirementModel(Base):
     text = Column(String, nullable=False)
 
     # Relationships
-    position = relationship("PositionsModel", back_populates="requirements")
+    position = relationship("PositionModel", back_populates="requirements")
 
 ################################################################################
-class PositionsModel(Base):
+class PositionModel(Base):
 
     __tablename__ = "positions"
 
     top_level_id = Column(Integer, ForeignKey("top_level.id", name="positions_top_level_fkey", ondelete="CASCADE"), nullable=False, server_default="1")
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=True)
-    requirement_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
     role_id = Column(BigInteger, nullable=True)
     description = Column(String, nullable=True)
 

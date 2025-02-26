@@ -83,3 +83,65 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating venue schedule: {str(e)}")
 
 ################################################################################
+    def position(self, pos_name: str) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_pos = PositionModel(name=pos_name)
+                db.add(new_pos)
+                db.commit()
+                db.refresh(new_pos)
+                return PositionSchema.model_validate(new_pos).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating position: {str(e)}")
+
+################################################################################
+    def requirement(self, pos_id: Optional[int], text: str) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_req = RequirementModel(position_id=pos_id, text=text)
+                db.add(new_req)
+                db.commit()
+                db.refresh(new_req)
+                return RequirementSchema.model_validate(new_req).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating requirement: {str(e)}")
+
+################################################################################
+    def bg_check(self, user_id: int) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_bg = BGCheckModel(user_id=user_id)
+                db.add(new_bg)
+                db.commit()
+                db.refresh(new_bg)
+                return BGCheckSchema.model_validate(new_bg).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating background check: {str(e)}")
+
+################################################################################
+    def bg_check_venue(self, parent_id: int, name: str, data_center: int, world: int, jobs: List[str]):
+
+        with self._parent._get_db() as db:
+            try:
+                new_bg_venue = BGCheckVenueModel(
+                    bg_check_id=parent_id,
+                    name=name,
+                    data_center=data_center,
+                    world=world,
+                    jobs=jobs
+                )
+                db.add(new_bg_venue)
+                db.commit()
+                db.refresh(new_bg_venue)
+                return BGCheckVenueSchema.model_validate(new_bg_venue).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating background check venue: {str(e)}")
+
+################################################################################

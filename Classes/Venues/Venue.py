@@ -15,7 +15,7 @@ from .VenueURLs import VenueURLs
 from Utilities import Utilities as U
 
 if TYPE_CHECKING:
-    from Classes import VenueManager, XIVVenue
+    from Classes import VenueManager, XIVVenue, Position
 ################################################################################
 
 __all__ = ("Venue",)
@@ -72,7 +72,7 @@ class Venue(ManagedObject):
             VenueHours(self, **sch)
             for sch in kwargs.get("schedules", [])
         ]
-        self._positions = []
+        self._positions: List[Position] = kwargs.get("positions", kwargs.get("position_ids", []))
 
         self._users: List[LazyUser] = [
             LazyUser(self, user_id)
@@ -94,6 +94,16 @@ class Venue(ManagedObject):
         self: V = cls(mgr, new_data["id"])
         await self.update_from_xiv_venue(xiv_venue)
         return self
+
+################################################################################
+    async def finalize_load(self) -> None:
+
+        self._positions = [
+            self.bot.position_manager[pos_id]  # type: ignore
+            for pos_id in self._positions
+        ]
+
+        await self.update_post_components(False)
 
 ################################################################################
     @property
@@ -193,9 +203,15 @@ class Venue(ManagedObject):
 
 ################################################################################
     @property
-    def positions(self) -> List:
+    def positions(self) -> List[Position]:
 
         return self._positions
+
+    @positions.setter
+    def positions(self, value: List[Position]) -> None:
+
+        self._positions = value
+        self.update()
 
 ################################################################################
     @property
@@ -268,6 +284,12 @@ class Venue(ManagedObject):
             **self._location.to_dict(),
             **self._urls.to_dict(),
         }
+
+################################################################################
+    def delete(self) -> None:
+
+        self.bot.db.delete.venue(self.id)
+        self._mgr._managed.remove(self)
 
 ################################################################################
     async def status(self, post: bool = False) -> Embed:
@@ -573,6 +595,65 @@ class Venue(ManagedObject):
 ################################################################################
     async def set_positions(self, interaction: Interaction) -> None:
 
-        raise NotImplementedError
+        prompt = U.make_embed(
+            title="Set Employed Positions",
+            description=(
+                "Please select the positions that your venue employs\n"
+                "from the selector below.\n\n"
+                
+                "***You may select multiple positions.***"
+            )
+        )
+        options = [p.select_option(p in self._positions) for p in self.bot.position_manager.positions]
+        view = FroggeSelectView(interaction.user, options, multi_select=True)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.positions = [self.bot.position_manager[v] for v in view.value]
+
+################################################################################
+    async def remove(self, interaction: Interaction) -> None:
+
+        await super().remove(interaction)
+
+        post_message = await self.post_message
+        if post_message is not None:
+            try:
+                await post_message.delete()
+            except NotFound:
+                pass
+
+        confirm = U.make_embed(
+            title="Venue Removed",
+            description=f"Venue `{self.name}` has been removed from the bot."
+        )
+        await interaction.followup.send(embed=confirm, ephemeral=True)
+        await self.bot.log.venue_removed(self)
+
+################################################################################
+    async def toggle_user_mute(self, interaction: Interaction, user: User) -> None:
+
+        flag = user in self.muted_users
+        if flag:
+            self._mutes = [u for u in self._mutes if u.id != user.id]
+        else:
+            self._mutes.append(LazyUser(self, user.id))
+
+        self.update()
+
+        description = f"@{user.display_name} has been `{'unmuted' if flag else 'muted'}`."
+        confirm = U.make_embed(
+            title="User Mute Status",
+            description=(
+                f"{user.mention} has been `{'unmuted' if flag else 'muted'}`.\n"
+                f"{U.draw_line(text=description)}"
+            )
+        )
+
+        await interaction.respond(embed=confirm, ephemeral=True)
 
 ################################################################################

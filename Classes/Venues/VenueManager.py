@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Any, List, Dict, Optional
 
 from discord import Interaction, User, Embed, ForumChannel
 
-from Classes.Common import ObjectManager, LazyChannel
+from Classes.Common import ObjectManager
 from UI.Common import FroggeView, ConfirmCancelView
-from .Venue import Venue
 from Utilities import Utilities as U
+from .Venue import Venue
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot
@@ -18,28 +18,20 @@ __all__ = ("VenueManager", )
 ################################################################################
 class VenueManager(ObjectManager):
 
-    __slots__ = (
-        "_post_channel",
-    )
-
-################################################################################
     def __init__(self, state: StaffPartyBot) -> None:
 
         super().__init__(state)
-
-        self._post_channel: LazyChannel = LazyChannel(self, None)
 
 ################################################################################
     async def load_all(self, payload: Dict[str, Any]) -> None:
 
         self._managed = [Venue(self, **v) for v in payload["venues"]]
-        self._post_channel = LazyChannel(self, payload["post_channel_id"])
 
 ################################################################################
     async def finalize_load(self) -> None:
 
         for venue in self._managed:
-            await venue.update_post_components(status=False)
+            await venue.finalize_load()
 
 ################################################################################
     @property
@@ -51,12 +43,7 @@ class VenueManager(ObjectManager):
     @property
     async def post_channel(self) -> Optional[ForumChannel]:
 
-        return await self._post_channel.get()
-
-    @post_channel.setter
-    def post_channel(self, value: Optional[ForumChannel]) -> None:
-
-        self._post_channel.set(value)
+        return await self.bot.channel_manager.venue_post_channel
 
 ################################################################################
     async def status(self) -> Embed:
@@ -192,5 +179,53 @@ class VenueManager(ObjectManager):
 
         await venue.post(interaction, await self.post_channel, True)
         await venue.menu(interaction)
+
+################################################################################
+    async def remove_venue(self, interaction: Interaction, venue_name: str) -> None:
+
+        venue = self.get_venue(venue_name)
+        if venue is None:
+            error = U.make_error(
+                title="Venue Doesn't Exist",
+                message=f"The venue `{venue_name}` hasn't been created yet.",
+                solution=f"Use the `/admin import_venue` command to create the venue."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        await venue.remove(interaction)
+
+################################################################################
+    @staticmethod
+    async def authenticate(venue: Venue, user: User, interaction: Interaction) -> bool:
+
+        if user not in await venue.managers:
+            error = U.make_error(
+                title="Unauthorized User",
+                message="You are not authorized to perform this action.",
+                solution="Please contact an administrator for assistance."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return False
+
+        return True
+
+################################################################################
+    async def toggle_user_mute(self, interaction: Interaction, name: str, user: User) -> None:
+
+        venue = self.get_venue(name)
+        if venue is None:
+            error = U.make_error(
+                title="Venue Doesn't Exist",
+                message=f"The venue `{name}` hasn't been created yet.",
+                solution=f"Use the `/admin import_venue` command to create the venue."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        if not await self.authenticate(venue, interaction.user, interaction):
+            return
+
+        await venue.toggle_user_mute(interaction, user)
 
 ################################################################################

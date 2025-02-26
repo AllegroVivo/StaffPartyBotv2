@@ -8,7 +8,6 @@ from discord import (
     SlashCommandOptionType,
     InteractionContextType
 )
-from ._test import test_api_data_parsing
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot
@@ -43,15 +42,32 @@ class Venues(Cog):
         )
     ) -> None:
 
-        await self.bot.venue_manager.import_venue(ctx.interaction, name)
+        await self.bot.venue_manager.import_venue(ctx.interaction, name, None)
 
 ################################################################################
-    @venues.command(name="test")
-    async def test_cmd(self, ctx: ApplicationContext) -> None:
+    @venues.command(
+        name="toggle_user_mute",
+        description="Toggle whether a user will hear about a venue's job postings.",
+        contexts=[InteractionContextType.guild]
+    )
+    async def venue_toggle_user_mute(
+        self,
+        ctx: ApplicationContext,
+        name: Option(
+            SlashCommandOptionType.string,
+            name="venue_name",
+            description="The name of the venue to mute the user for.",
+            required=True
+        ),
+        user: Option(
+            SlashCommandOptionType.user,
+            name="user",
+            description="The user to un/mute.",
+            required=True
+        )
+    ) -> None:
 
-        await ctx.interaction.response.defer()
-        await test_api_data_parsing(self.bot)
-        await ctx.respond("Test complete.")
+        await self.bot.venue_manager.toggle_user_mute(ctx.interaction, name, user)
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:

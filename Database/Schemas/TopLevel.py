@@ -1,7 +1,9 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel
 
+from . import BGCheckManagerSchema
+from .Positions import PositionManagerSchema
 from .Venues import VenueManagerSchema
 ################################################################################
 
@@ -9,13 +11,33 @@ __all__ = (
     "GuildDataSchema",
     "TopLevelGuildSchema",
     "MasterResponseSchema",
-    "LoggerConfigSchema",
+    "ChannelManagerSchema",
+    "RoleManagerSchema",
 )
 
 ################################################################################
-class LoggerConfigSchema(BaseModel):
+class RoleManagerSchema(BaseModel):
+
+    staff_role_id: Optional[int]
+    staff_pending_role_id: Optional[int]
+    venue_management_role_id: Optional[int]
+    trainee_role_id: Optional[int]
+    trainee_hiatus_role_id: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+################################################################################
+class ChannelManagerSchema(BaseModel):
 
     log_channel_id: Optional[int]
+    venue_channel_id: Optional[int]
+    temp_job_channel_id: Optional[int]
+    profile_channel_id: Optional[int]
+    welcome_channel_id: Optional[int]
+    group_training_channel_id: Optional[int]
+    bg_check_channel_id: Optional[int]
+    restart_channel_ids: List[int]
 
     class Config:
         from_attributes = True
@@ -39,8 +61,11 @@ class TopLevelGuildSchema(BaseModel):
 class MasterResponseSchema(BaseModel):
 
     # guilds: List[TopLevelGuildSchema]
-    logger: LoggerConfigSchema
+    channel_manager: ChannelManagerSchema
+    role_manager: RoleManagerSchema
     venue_manager: VenueManagerSchema
+    position_manager: PositionManagerSchema
+    bg_check_manager: BGCheckManagerSchema
 
     class Config:
         from_attributes = True

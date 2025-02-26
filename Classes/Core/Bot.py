@@ -3,16 +3,19 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Optional, Union
 
-from discord import Bot, Attachment, Guild, NotFound, Member, User, Message
+from discord import Bot, Attachment, Guild, NotFound, Member, User, Message, Interaction
 from discord.abc import GuildChannel
 from dotenv import load_dotenv
 
+from Classes.BackgroundChecks.BGCheckManager import BGCheckManager
+from Classes.Positions.PositionManager import PositionManager
+from Classes.Venues.VenueManager import VenueManager
 from Classes.XIVVenues.XIVVenuesClient import XIVVenuesClient
 from Database.Database import Database
+from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
-from Classes.Venues.VenueManager import VenueManager
+from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
-from Classes.Positions.PositionManager import PositionManager
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -31,13 +34,28 @@ class StaffPartyBot(Bot):
         "_venue_mgr",
         "_logger",
         "_position_mgr",
+        "_bg_check_mgr",
+        "_channel_mgr",
+        "_role_mgr",
     )
 
     IMAGE_DUMP = 991902526188302427
     SPB_ID = 1104515062187708525
 
+    MAX_SELECT_OPTIONS = 25
+    MAX_MULTI_SELECT_OPTIONS = 80
+
     load_dotenv()
     DEBUG = os.getenv("DEBUG") == "True"
+
+    VENUE_ETIQUETTE = (
+        "https://canary.discord.com/channels/955933227372122173/"
+        "957656105092272208/1231769147113738260"
+    )
+    DE_ESCALATION = (
+        "https://canary.discord.com/channels/955933227372122173/"
+        "957656105092272208/1244338542029832333"
+    )
 
 ################################################################################
     def __init__(self, *args, **kwargs) -> None:
@@ -51,8 +69,12 @@ class StaffPartyBot(Bot):
         self._xiv_client: XIVVenuesClient = XIVVenuesClient(self)
         self._logger: SPBLogger = SPBLogger(self)
 
+        self._channel_mgr: ChannelManager = ChannelManager(self)
+        self._role_mgr: RoleManager = RoleManager(self)
+
         self._position_mgr: PositionManager = PositionManager(self)
         self._venue_mgr: VenueManager = VenueManager(self)
+        self._bg_check_mgr: BGCheckManager = BGCheckManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -71,7 +93,7 @@ class StaffPartyBot(Bot):
             raise Exception("No guild data found in the database.")
 
         print("Initializing logger...")
-        await self._logger.load_all(payload["logger"])
+        await self._logger.load_all()
 
         print("Initializing guilds data...")
         # guild_ids = []
@@ -90,11 +112,18 @@ class StaffPartyBot(Bot):
         # for gid in guild_ids:
         #     self.db.insert.guild(self.get_guild(gid))
 
-        print("Initializing venues data...")
-        await self._position_mgr.load_all(payload["position_manager"])
-        await self._venue_mgr.load_all(payload["venue_manager"])
+        print("Loading channel & role managers...")
+        self._channel_mgr.load_all(payload["channel_manager"])
+        self._role_mgr.load_all(payload["role_manager"])
 
-        print("Finalizing Load in All Modules...")
+        print("Loading positions...")
+        await self._position_mgr.load_all(payload["position_manager"])
+        print("Loading venues...")
+        await self._venue_mgr.load_all(payload["venue_manager"])
+        print("Loading background checks...")
+        await self._bg_check_mgr.load_all(payload["bg_check_manager"])
+
+        print("Finalizing load...")
         await self._finalize_load()
 
         print("Done!")
@@ -102,8 +131,11 @@ class StaffPartyBot(Bot):
 ################################################################################
     async def _finalize_load(self) -> None:
 
-        self._position_mgr.finalize_load()
-        await self._venue_mgr.finalize_load()
+        for attr in self.__slots__:
+            if attr.endswith("_mgr"):
+                mgr = getattr(self, attr)
+                if getattr(mgr, "finalize_load", None):
+                    await mgr.finalize_load()
 
 ################################################################################
     @property
@@ -131,9 +163,34 @@ class StaffPartyBot(Bot):
 
 ################################################################################
     @property
+    def position_manager(self) -> PositionManager:
+
+        return self._position_mgr
+
+################################################################################
+    @property
+    def bg_check_manager(self) -> BGCheckManager:
+
+        return self._bg_check_mgr
+
+################################################################################
+    @property
     def log(self) -> SPBLogger:
 
         return self._logger
+
+################################################################################
+    # Can't call this "channels" because that conflicts with the discord.py attribute
+    @property
+    def channel_manager(self) -> ChannelManager:
+
+        return self._channel_mgr
+
+################################################################################
+    @property
+    def role_manager(self) -> RoleManager:
+
+        return self._role_mgr
 
 ################################################################################
     async def dump_image(self, image: Attachment) -> str:
@@ -207,5 +264,20 @@ class StaffPartyBot(Bot):
                 return await channel.fetch_message(int(url_parts[-1]))  # type: ignore
             except NotFound:
                 return None
+
+################################################################################
+    async def venue_etiquette(self, interaction: Interaction) -> None:
+
+        await interaction.response.defer()
+
+        etiquette_msg = await self.get_or_fetch_message(self.VENUE_ETIQUETTE)
+        de_escalation_msg = await self.get_or_fetch_message(self.DE_ESCALATION)
+
+        files = [
+            await etiquette_msg.attachments[0].to_file(),
+            await de_escalation_msg.attachments[0].to_file()
+        ]
+
+        await interaction.respond(files=files, delete_after=300)
 
 ################################################################################

@@ -1,8 +1,6 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, RootModel
-
-from .Venues import VenueManagerSchema
+from pydantic import BaseModel
 ################################################################################
 
 __all__ = (
@@ -25,9 +23,9 @@ class PositionSchema(BaseModel):
 
     id: int
     name: str
-    requirement_ids: List[int]
     role_id: Optional[int]
     description: Optional[str]
+    requirements: List[RequirementSchema] = []
 
     class Config:
         from_attributes = True

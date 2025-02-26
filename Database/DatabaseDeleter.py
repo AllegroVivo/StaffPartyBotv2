@@ -45,3 +45,18 @@ class DatabaseDeleter:
         self._delete_record(Models.VenueScheduleModel, hours_id)
 
 ################################################################################
+    def requirement(self, req_id: int) -> None:
+
+        self._delete_record(Models.RequirementModel, req_id)
+
+################################################################################
+    def bg_check_venue(self, venue_id: int) -> None:
+
+        self._delete_record(Models.BGCheckVenueModel, venue_id)
+
+################################################################################
+    def venue(self, venue_id: int) -> None:
+
+        self._delete_record(Models.VenueModel, venue_id)
+
+################################################################################

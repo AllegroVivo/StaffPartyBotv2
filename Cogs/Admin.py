@@ -6,7 +6,9 @@ from discord import (
     SlashCommandGroup,
     Option,
     SlashCommandOptionType,
-    InteractionContextType, ChannelType
+    InteractionContextType,
+    ChannelType,
+    OptionChoice
 )
 from ._test import test_api_data_parsing
 
@@ -53,30 +55,69 @@ class Admin(Cog):
 
 ################################################################################
     @admin.command(
-        name="set_log_channel",
-        description="Set the logging channel for the server."
+        name="channels",
+        description="Set channels for server operations."
     )
-    async def set_log_channel(
+    async def set_channels(self, ctx: ApplicationContext) -> None:
+
+        await self.bot.channel_manager.main_menu(ctx.interaction)
+
+################################################################################
+    @admin.command(
+        name="roles",
+        description="Set roles for server operations."
+    )
+    async def set_roles(self, ctx: ApplicationContext) -> None:
+
+        await self.bot.role_manager.main_menu(ctx.interaction)
+
+################################################################################
+    @admin.command(
+        name="positions",
+        description="Manage the position system for the server."
+    )
+    async def admin_positions(self, ctx: ApplicationContext) -> None:
+
+        await self.bot.position_manager.main_menu(ctx.interaction)
+
+################################################################################
+    @admin.command(
+        name="yeet_venue",
+        description="Remove a venue from the system."
+    )
+    async def yeet_venue(
         self,
         ctx: ApplicationContext,
-        channel: Option(
-            SlashCommandOptionType.channel,
-            name="channel",
-            description="The channel to set as the logging channel.",
-            required=True,
-            channel_types=[ChannelType.text]
+        name: Option(
+            SlashCommandOptionType.string,
+            name="name",
+            description="The name of the venue to remove.",
+            required=True
         )
     ) -> None:
 
-        await self.bot.log.set_log_channel(ctx.interaction, channel)
+        await self.bot.venue_manager.remove_venue(ctx.interaction, name)
 
 ################################################################################
-    @admin.command(name="test")
-    async def test_cmd(self, ctx: ApplicationContext) -> None:
+    @admin.command(
+        name="staff_experience",
+        description="View a previously submitted staff background check."
+    )
+    async def staff_experience(
+        self,
+        ctx: ApplicationContext,
+        user: Option(
+            SlashCommandOptionType.user,
+            name="user",
+            description="The user to view the background check for.",
+            required=True
+        )
+    ) -> None:
 
-        await ctx.interaction.response.defer()
-        await test_api_data_parsing(self.bot)
-        await ctx.respond("Test complete.")
+        await self.bot.bg_check_manager.staff_experience(ctx.interaction, user)
+
+################################################################################
+
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:

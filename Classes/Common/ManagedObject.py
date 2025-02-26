@@ -12,7 +12,7 @@ from Utilities import Utilities as U
 from .Identifiable import Identifiable
 
 if TYPE_CHECKING:
-    from Classes import ObjectManager, StaffPartyBot, GuildData
+    from Classes import ObjectManager, StaffPartyBot
     from UI.Common import FroggeView
 ################################################################################
 

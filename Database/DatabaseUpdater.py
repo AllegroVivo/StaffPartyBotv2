@@ -67,3 +67,13 @@ class DatabaseUpdater:
         self._update_record(Models.PositionModel, pos.to_dict(), id=pos.id)
 
 ################################################################################
+    def requirement(self, req: Requirement) -> None:
+
+        self._update_record(Models.RequirementModel, req.to_dict(), id=req.id)
+
+################################################################################
+    def bg_check(self, bg: BGCheck) -> None:
+
+        self._update_record(Models.BGCheckModel, bg.to_dict(), id=bg.id)
+
+################################################################################
