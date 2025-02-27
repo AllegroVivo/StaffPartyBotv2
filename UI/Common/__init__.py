@@ -1,3 +1,4 @@
+from .AccentColorModal import AccentColorModal
 from .BasicNumberModal import BasicNumberModal
 from .BasicTextModal import BasicTextModal
 from .CloseMessage import *

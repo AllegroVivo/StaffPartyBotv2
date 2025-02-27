@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Optional, Dict
 
 from Assets import BotEmojis
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 __all__ = ("ProfileSection",)
 
 ################################################################################
-class ProfileSection:
+class ProfileSection(ABC):
     
     __slots__ = (
         "_parent",
@@ -45,5 +46,16 @@ class ProfileSection:
     def progress_emoji(attribute: Optional[Any]) -> str:
 
         return str(BotEmojis.Cross if not attribute else BotEmojis.Check)
+
+################################################################################
+    def update(self) -> None:
+
+        self.bot.db.update.profile(self)
+
+################################################################################
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+
+        raise NotImplementedError
 
 ################################################################################
