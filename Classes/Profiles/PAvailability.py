@@ -49,22 +49,17 @@ class PAvailability(Availability):
     @staticmethod
     def short_availability_status(availability: List[PAvailability]) -> str:
 
-        if not availability:
-            return "`No Availability Set`"
-
-        ret = ""
-        for a in availability:
-            ret += (
+        return "\n".join([
+            (
                 f"{a.day.proper_name}: "
                 f"{a.start_timestamp} - {a.end_timestamp}\n"
-            )
-
-        return ret
+            ) for a in availability
+        ]) if availability else "`No Availability Set`"
 
 ################################################################################
     def delete(self) -> None:
 
-        self._parent.bot.database.delete.profile_availability(self)
+        self.bot.db.delete.profile_availability(self)
 
 ################################################################################
     

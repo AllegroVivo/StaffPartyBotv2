@@ -3,10 +3,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, Dict
 
+from discord import Embed, Interaction, User
+
 from Assets import BotEmojis
 
 if TYPE_CHECKING:
     from Classes import Profile, StaffPartyBot
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("ProfileSection",)
@@ -57,5 +60,26 @@ class ProfileSection(ABC):
     def to_dict(self) -> Dict[str, Any]:
 
         raise NotImplementedError
+
+################################################################################
+    @abstractmethod
+    def status(self) -> Embed:
+
+        raise NotImplementedError
+
+################################################################################
+    @abstractmethod
+    def get_menu_view(self, user: User) -> FroggeView:
+
+        raise NotImplementedError
+
+################################################################################
+    async def menu(self, interaction: Interaction) -> None:
+
+        embed = self.status()
+        view = self.get_menu_view(interaction.user)
+
+        await interaction.respond(embed=embed, view=view)
+        await view.wait()
 
 ################################################################################

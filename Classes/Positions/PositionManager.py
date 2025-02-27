@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Dict, Optional
 
-from discord import Interaction, User, Embed, EmbedField
+from discord import Interaction, User, Embed, EmbedField, SelectOption
 
 from Classes.Common import ObjectManager
 from Errors import MaxItemsReached
@@ -53,7 +53,13 @@ class PositionManager(ObjectManager):
     @property
     def positions(self) -> List[Position]:
 
-        return sorted(self._managed, key=lambda p: p.name)
+        self._managed.sort(key=lambda p: p.name)
+        return self._managed
+
+################################################################################
+    def select_options(self) -> List[SelectOption]:
+
+        return [p.select_option() for p in self.positions]
 
 ################################################################################
     async def status(self) -> Embed:

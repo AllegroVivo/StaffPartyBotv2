@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
-from . import BGCheckManagerSchema
+from . import BGCheckManagerSchema, ProfileManagerSchema
 from .Positions import PositionManagerSchema
 from .Venues import VenueManagerSchema
 ################################################################################
@@ -37,7 +37,6 @@ class ChannelManagerSchema(BaseModel):
     welcome_channel_id: Optional[int]
     group_training_channel_id: Optional[int]
     bg_check_channel_id: Optional[int]
-    restart_channel_ids: List[int]
 
     class Config:
         from_attributes = True
@@ -66,6 +65,7 @@ class MasterResponseSchema(BaseModel):
     venue_manager: VenueManagerSchema
     position_manager: PositionManagerSchema
     bg_check_manager: BGCheckManagerSchema
+    profile_manager: ProfileManagerSchema
 
     class Config:
         from_attributes = True

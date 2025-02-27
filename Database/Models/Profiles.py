@@ -36,7 +36,7 @@ class StaffProfileModel(Base):
     rates = Column(String, nullable=True)
     position_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
     dm_pref = Column(Boolean, nullable=False, server_default="false")
-    timezone = Column(Integer, nullable=False, server_default="7")
+    timezone = Column(Integer, nullable=True)
     # At A Glance
     gender = Column(String, nullable=True)
     pronouns = Column(ARRAY(Integer), nullable=False, server_default="{}")

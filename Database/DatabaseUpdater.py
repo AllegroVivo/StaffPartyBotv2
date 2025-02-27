@@ -77,3 +77,8 @@ class DatabaseUpdater:
         self._update_record(Models.BGCheckModel, bg.to_dict(), id=bg.id)
 
 ################################################################################
+    def profile(self, p: Profile) -> None:
+
+        self._update_record(Models.StaffProfileModel, p.to_dict(), user_id=p.user_id)
+
+################################################################################

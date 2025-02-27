@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 from datetime import time
 from typing import TYPE_CHECKING, List, Type, TypeVar, Union
 
+from Classes.Common import Identifiable
 from Enums import Weekday
 from Utilities import Utilities as U
 
 if TYPE_CHECKING:
-    from Classes import Profile, TUser
+    from Classes import Profile, TUser, StaffPartyBot
 ################################################################################
 
 __all_ = ("Availability",)
@@ -16,7 +17,7 @@ __all_ = ("Availability",)
 A = TypeVar("A", bound="Availability")
 
 ################################################################################
-class Availability(ABC):
+class Availability(Identifiable, ABC):
 
     __slots__ = (
         "_parent",
@@ -28,7 +29,9 @@ class Availability(ABC):
     )
 
 ################################################################################
-    def __init__(self, parent: Union[Profile, TUser], **kwargs) -> None:
+    def __init__(self, parent: Union[Profile, TUser], id: int, **kwargs) -> None:
+
+        super().__init__(id)
 
         self._parent: Union[Profile, TUser] = parent
 
@@ -52,6 +55,12 @@ class Availability(ABC):
     ) -> A:
 
         raise NotImplementedError
+
+################################################################################
+    @property
+    def bot(self) -> StaffPartyBot:
+
+        return self._parent.bot
 
 ################################################################################
     @property

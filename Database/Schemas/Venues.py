@@ -62,7 +62,6 @@ class VenueSchema(BaseModel):
 ################################################################################
 class VenueManagerSchema(BaseModel):
 
-    post_channel_id: Optional[int]
     venues: List[VenueSchema]
 
     class Config:

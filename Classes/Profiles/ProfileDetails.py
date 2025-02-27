@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+
 from typing import TYPE_CHECKING, Optional, List, Any, Dict
 
-from discord import Embed, EmbedField, Interaction
+from discord import Embed, EmbedField, Interaction, User, SelectOption
 
 from Assets import BotEmojis
-from UI.Common import BasicTextModal
+from UI.Common import BasicTextModal, AccentColorModal, FroggeSelectView, TimeSelectView
+from UI.Profiles import ProfileJobsModal
 from .ProfileSection import ProfileSection
 from Utilities import Utilities as U, FroggeColor
 from .PAvailability import PAvailability
-from Enums import Timezone
+from Enums import Timezone, Weekday, Hours
 
 if TYPE_CHECKING:
     from Classes import Profile, Position
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("ProfileDetails", )
@@ -45,7 +48,7 @@ class ProfileDetails(ProfileSection):
         self._positions: List[Position] = kwargs.get("positions", [])
         self._availability: List[PAvailability] = kwargs.get("availability", [])
         self._dm_pref: bool = kwargs.get("dm_pref", False)
-        self._tz: Timezone = kwargs.get("timezone", Timezone.EST)
+        self._tz: Optional[Timezone] = kwargs.get("timezone")
 
 ################################################################################
     def finalize_load(self) -> None:
@@ -226,6 +229,11 @@ class ProfileDetails(ProfileSection):
         )
 
 ################################################################################
+    def get_menu_view(self, user: User) -> FroggeView:
+
+        pass
+
+################################################################################
     async def set_name(self, interaction: Interaction) -> None:
 
         modal = BasicTextModal(
@@ -275,15 +283,168 @@ class ProfileDetails(ProfileSection):
 ################################################################################
     async def set_color(self, interaction: Interaction) -> None:
 
-        modal = ProfileColorModal(self.color)
+        modal = AccentColorModal(self.color)
 
         await interaction.response.send_modal(modal)
         await modal.wait()
 
         if not modal.complete:
-            log.debug("Profiles", "Color modal was not completed.")
             return
 
-        self.color = Colour(modal.value)
+        self.color = modal.value
+
+################################################################################
+    async def set_jobs(self, interaction: Interaction) -> None:
+
+        modal = ProfileJobsModal(self.jobs)
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.jobs = modal.value
+
+################################################################################
+    async def set_rates(self, interaction: Interaction) -> None:
+
+        modal = BasicTextModal(
+            title="Profile Rates Section",
+            attribute="Rates Section",
+            example="eg. '250k gil per photo shoot'",
+            cur_val=self.rates,
+            max_length=500,
+            required=False,
+            multiline=True
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.rates = modal.value
+
+################################################################################
+    async def set_positions(self, interaction: Interaction) -> None:
+
+        base_options = self.bot.position_manager.select_options()
+        options = [
+            SelectOption(
+                label=option.label,
+                value=option.value,
+                default=int(option.value) in [p.id for p in self.positions]
+            ) for option in base_options
+        ]
+
+        prompt = U.make_embed(
+            title="Set Positions",
+            description="Please select the positions you are qualified to work."
+        )
+        view = FroggeSelectView(interaction.user, options, multi_select=True)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.positions = [self.bot.position_manager[p] for p in view.value]
+
+################################################################################
+    async def set_timezone(self, interaction: Interaction) -> None:
+
+        prompt = U.make_embed(
+            title="Set Timezone",
+            description="Please select your timezone from the picker below."
+        )
+        view = FroggeSelectView(interaction.user, Timezone.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.timezone = Timezone(view.value)
+
+################################################################################
+    async def toggle_dm_preference(self, interaction: Interaction) -> None:
+
+        self.dm_preference = not self.dm_preference
+        await interaction.edit()
+
+################################################################################
+    async def set_availability(self, interaction: Interaction) -> None:
+
+        if self._tz is None:
+            await self.set_timezone(interaction)
+            if self._tz is None:
+                return
+
+        prompt = U.make_embed(
+            title="Set Availability",
+            description="Please select the day you want to set availability for."
+        )
+        view = FroggeSelectView(interaction.user, Weekday.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        weekday = Weekday(int(view.value))
+        assert self._tz is not None
+
+        prompt = U.make_embed(
+            title="Set Availability Start",
+            description=(
+                f"Please select the beginning of your availability "
+                f"for `{weekday.proper_name}`...\n\n"
+                
+                f"Times will be interpreted using the previously configured "
+                f"`{self._tz.proper_name}` timezone."
+            )
+        )
+        view = TimeSelectView(interaction.user)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        for i, a in enumerate(self._availability):
+            if a.day == weekday:
+                self._availability.pop(i).delete()
+                break
+
+        if view.value is Hours.Unavailable:
+            return
+
+        start_hour, start_minute = view.value
+
+        prompt = U.make_embed(
+            title="Set Availability End",
+            description=(
+                f"Please select the end of your availability "
+                f"for `{weekday.proper_name}`...\n\n"
+
+                f"Times will be interpreted using the previously configured "
+                f"`{self._tz.proper_name}` timezone."
+            )
+        )
+        view = TimeSelectView(interaction.user, False)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        end_hour, end_minute = view.value
 
 ################################################################################
