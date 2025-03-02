@@ -229,3 +229,21 @@ class VenueManager(ObjectManager):
         await venue.toggle_user_mute(interaction, user)
 
 ################################################################################
+    async def venue_menu(self, interaction: Interaction, name: str) -> None:
+
+        venue = self.get_venue(name)
+        if venue is None:
+            error = U.make_error(
+                title="Venue Doesn't Exist",
+                message=f"The venue `{name}` hasn't been created yet.",
+                solution=f"Use the `/venue import` command to create the venue."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        if not await self.authenticate(venue, interaction.user, interaction):
+            return
+
+        await venue.menu(interaction)
+
+################################################################################

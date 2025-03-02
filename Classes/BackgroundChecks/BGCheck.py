@@ -352,7 +352,7 @@ class BGCheck:
         await self.bot.role_manager.approve_staff(bg_check_user)  # type: ignore
 
         self._approved_at = datetime.now()
-        self._approved_by = approved_by
+        self._approved_by = LazyUser(self, approved_by.id)
         self.approved = True
 
         confirm = U.make_embed(

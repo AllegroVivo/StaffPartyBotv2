@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-
-from typing import TYPE_CHECKING, Optional, List, Any, Dict
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional, List, Any, Dict, Union, Tuple
+from zoneinfo import ZoneInfo
 
 from discord import Embed, EmbedField, Interaction, User, SelectOption
 
 from Assets import BotEmojis
-from UI.Common import BasicTextModal, AccentColorModal, FroggeSelectView, TimeSelectView
-from UI.Profiles import ProfileJobsModal
-from .ProfileSection import ProfileSection
-from Utilities import Utilities as U, FroggeColor
-from .PAvailability import PAvailability
 from Enums import Timezone, Weekday, Hours
+from UI.Common import BasicTextModal, AccentColorModal, FroggeSelectView, TimeSelectView
+from UI.Profiles import ProfileJobsModal, ProfileDetailsStatusView
+from Utilities import Utilities as U, FroggeColor
+from .Availability import Availability
+from .ProfileSection import ProfileSection
 
 if TYPE_CHECKING:
     from Classes import Profile, Position
@@ -46,9 +47,13 @@ class ProfileDetails(ProfileSection):
         self._jobs: List[str] = kwargs.get("jobs", [])
         self._rates: Optional[str] = kwargs.get("rates")
         self._positions: List[Position] = kwargs.get("positions", [])
-        self._availability: List[PAvailability] = kwargs.get("availability", [])
+        self._availability: List[Availability] = kwargs.get("availability", [])
         self._dm_pref: bool = kwargs.get("dm_pref", False)
-        self._tz: Optional[Timezone] = kwargs.get("timezone")
+        self._tz: Optional[ZoneInfo] = (
+            ZoneInfo(kwargs.get("timezone"))
+            if kwargs.get("timezone")
+            else None
+        )
 
 ################################################################################
     def finalize_load(self) -> None:
@@ -130,7 +135,7 @@ class ProfileDetails(ProfileSection):
 
 ################################################################################
     @property
-    def availability(self) -> List[PAvailability]:
+    def availability(self) -> List[Availability]:
 
         self._availability.sort(key=lambda x: x.day.value)
         return self._availability
@@ -149,12 +154,15 @@ class ProfileDetails(ProfileSection):
 
 ################################################################################
     @property
-    def timezone(self) -> Timezone:
+    def timezone(self) -> Optional[ZoneInfo]:
 
         return self._tz
 
     @timezone.setter
-    def timezone(self, value: Timezone) -> None:
+    def timezone(self, value: Union[str, ZoneInfo]) -> None:
+
+        if isinstance(value, str):
+            value = ZoneInfo(value)
 
         self._tz = value
         self.update()
@@ -170,7 +178,7 @@ class ProfileDetails(ProfileSection):
             "rates": self._rates,
             "positions": [p.id for p in self._positions],
             "dm_pref": self._dm_pref,
-            "timezone": self._tz.value if self._tz else None,
+            "timezone": self._tz.key if self._tz else None,
         }
 
 ################################################################################
@@ -221,7 +229,7 @@ class ProfileDetails(ProfileSection):
                 ),
                 EmbedField(
                     name="__Availability__",
-                    value=PAvailability.short_availability_status(self._availability),
+                    value=Availability.short_availability_status(self._availability),
                     inline=False
                 ),
                 EmbedField("__Freelance Rates__", rates, False)
@@ -231,7 +239,53 @@ class ProfileDetails(ProfileSection):
 ################################################################################
     def get_menu_view(self, user: User) -> FroggeView:
 
-        pass
+        return ProfileDetailsStatusView(user, self)
+
+################################################################################
+    def compile(self) -> Any:
+
+        position_str = ", ".join([f"`{p.name}`" for p in self.positions])
+        availability = U.make_embed(
+            color=self.color,
+            title="__Availability__",
+            description=(
+                f"{Availability.long_availability_status(self.availability)}\n"
+
+                "**__Employable Positions__**\n"
+                f"{position_str}"
+            ),
+            footer_text=self._url
+        )
+
+        return (
+            self.name,
+            self.url,
+            self.color,
+            "/".join(self._jobs) if self._jobs else None,
+            EmbedField(
+                name=f"{BotEmojis.FlyingMoney} __Freelance Rates__ {BotEmojis.FlyingMoney}",
+                value=(
+                    f"{self.rates}\n"
+                    f"{U.draw_line(extra=15)}"
+                ),
+                inline=False
+            ) if self.rates else None,
+            availability,
+            self.dm_preference
+        )
+
+################################################################################
+    def progress(self) -> str:
+
+        return (
+            f"{U.draw_line(extra=15)}\n"
+            "__**Details**__\n"
+            f"{self.progress_emoji(self._name)} -- Character Name\n"
+            f"{self.progress_emoji(self._url)} -- Custom URL\n"
+            f"{self.progress_emoji(self._color)} -- Accent Color\n"
+            f"{self.progress_emoji(self._jobs)} -- Jobs List\n"
+            f"{self.progress_emoji(self._rates)} -- Rates Field\n"
+        )
 
 ################################################################################
     async def set_name(self, interaction: Interaction) -> None:
@@ -368,7 +422,7 @@ class ProfileDetails(ProfileSection):
         if not view.complete or view.value is False:
             return
 
-        self.timezone = Timezone(view.value)
+        self.timezone = U.TIMEZONE_OFFSETS[Timezone(view.value)]
 
 ################################################################################
     async def toggle_dm_preference(self, interaction: Interaction) -> None:
@@ -406,7 +460,7 @@ class ProfileDetails(ProfileSection):
                 f"for `{weekday.proper_name}`...\n\n"
                 
                 f"Times will be interpreted using the previously configured "
-                f"`{self._tz.proper_name}` timezone."
+                f"`{self._tz.key}` timezone."
             )
         )
         view = TimeSelectView(interaction.user)
@@ -434,7 +488,7 @@ class ProfileDetails(ProfileSection):
                 f"for `{weekday.proper_name}`...\n\n"
 
                 f"Times will be interpreted using the previously configured "
-                f"`{self._tz.proper_name}` timezone."
+                f"`{self._tz.key}` timezone."
             )
         )
         view = TimeSelectView(interaction.user, False)
@@ -446,5 +500,27 @@ class ProfileDetails(ProfileSection):
             return
 
         end_hour, end_minute = view.value
+
+        # === CONVERT USER INPUT TO UTC === #
+        today = datetime.today().date()  # Get today's date (we only care about time)
+
+        # Create a naive datetime object
+        start_local = datetime(today.year, today.month, today.day, start_hour, start_minute)
+        end_local = datetime(today.year, today.month, today.day, end_hour, end_minute)
+
+        # Attach the user's timezone
+        start_with_tz = start_local.replace(tzinfo=self._tz)
+        end_with_tz = end_local.replace(tzinfo=self._tz)
+
+        # Convert to UTC
+        start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
+        end_utc = end_with_tz.astimezone(ZoneInfo("UTC"))
+
+        # Store the UTC times
+        availability = Availability.new(
+            self.parent, weekday, start_utc.hour,
+            start_utc.minute, end_utc.hour, end_utc.minute
+        )
+        self._availability.append(availability)
 
 ################################################################################

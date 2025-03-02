@@ -39,12 +39,18 @@ class VenueHours(Identifiable):
 
         self._parent: Venue = parent
 
-        self._day: Weekday = kwargs.get("day")
-        self._open_hour: int = kwargs.get("open_hour")
-        self._open_minute: int = kwargs.get("open_minute")
-        self._close_hour: Optional[int] = kwargs.get("close_hour")
-        self._close_minute: Optional[int] = kwargs.get("close_minute")
-        self._interval_type: XIVIntervalType = kwargs.get("interval_type")
+        day = kwargs.get("day")
+        interval_type = kwargs.get("interval_type")
+        self._day: Weekday = Weekday(day) if day is not None else None
+        self._open_hour: int = kwargs.get("start_hour")
+        self._open_minute: int = kwargs.get("start_minute")
+        self._close_hour: Optional[int] = kwargs.get("end_hour")
+        self._close_minute: Optional[int] = kwargs.get("end_minute")
+        self._interval_type: XIVIntervalType = (
+            XIVIntervalType(interval_type)
+            if interval_type is not None
+            else None
+        )
         self._interval_arg: int = kwargs.get("interval_arg")
 
 ################################################################################
@@ -65,7 +71,8 @@ class VenueHours(Identifiable):
 ################################################################################
     def open_ts(self) -> str:
 
-        return U.format_dt(self.resolve(), "t")
+        res = self.resolve()
+        return U.format_dt(res, "t")
 
 ################################################################################
     def close_ts(self) -> str:
@@ -89,10 +96,10 @@ class VenueHours(Identifiable):
 
         return {
             "day": self._day.value,
-            "open_hour": self._open_hour,
-            "open_minute": self._open_minute,
-            "close_hour": self._close_hour,
-            "close_minute": self._close_minute,
+            "start_hour": self._open_hour,
+            "start_minute": self._open_minute,
+            "end_hour": self._close_hour,
+            "end_minute": self._close_minute,
             "interval_type": self._interval_type.value,
             "interval_arg": self._interval_arg,
         }
@@ -174,7 +181,86 @@ class VenueHours(Identifiable):
 
 ################################################################################
     def format(self) -> str:
+        """
+        Returns a human-readable schedule string, taking into account the interval type
+        (e.g. Every X weeks vs. the Xth or Xth-last weekday of the month) and the open/close times.
+        """
 
-        return f"{self._day.proper_name}: {self.open_ts()} - {self.close_ts()}"
+        day_name = self._day.proper_name if self._day else "Unknown Day"
+
+        # Convert the open/close times to strings
+        open_str = self.open_ts()
+        close_str = self.close_ts()
+
+        if not self._interval_type:
+            # Fallback if interval type is not set
+            return f"{day_name}: {open_str} - {close_str}"
+
+        if self._interval_type == XIVIntervalType.EveryXWeeks:
+            # e.g. "Every 2 weeks on Tuesday: 10:00 AM - 2:00 PM"
+            return (
+                f"Every {self._interval_arg} week(s) on {day_name}: "
+                f"{open_str} - {close_str}"
+            )
+
+        elif self._interval_type == XIVIntervalType.EveryXthDayOfTheMonth:
+            # e.g. "2nd Tuesday of the month: 10:00 AM - 2:00 PM"
+            ordinal_str = self._get_ordinal_string(self._interval_arg)
+            return (
+                f"{ordinal_str} {day_name} of the month: "
+                f"{open_str} - {close_str}"
+            )
+
+        # Add more elif blocks if you have other interval types...
+        else:
+            # Fallback for unknown/unsupported interval types
+            return f"{day_name}: {open_str} - {close_str}"
+
+################################################################################
+    def _get_ordinal_string(self, n: int) -> str:
+        """
+        Convert an integer into a string describing its ordinal position.
+        Examples:
+          1 -> '1st'
+          2 -> '2nd'
+          3 -> '3rd'
+          4 -> '4th'
+          -1 -> 'last'
+          -2 -> '2nd-last'
+          -3 -> '3rd-last'
+        """
+
+        # Handle negative values as "nth-last"
+        if n < 0:
+            abs_n = abs(n)
+            suffix = self._positive_ordinal_suffix(abs_n)
+            # e.g. abs_n=2 -> "2nd-last"
+            return f"{suffix}-last"
+        else:
+            # e.g. n=2 -> "2nd"
+            return self._positive_ordinal_suffix(n)
+
+################################################################################
+    @staticmethod
+    def _positive_ordinal_suffix(n: int) -> str:
+        """
+        Returns the English ordinal suffix for a positive integer.
+        1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th', etc.
+        """
+
+        # Special cases: 11th, 12th, 13th
+        if 11 <= (n % 100) <= 13:
+            return f"{n}th"
+
+        # Cases for 1, 2, 3
+        last_digit = n % 10
+        if last_digit == 1:
+            return f"{n}st"
+        elif last_digit == 2:
+            return f"{n}nd"
+        elif last_digit == 3:
+            return f"{n}rd"
+        else:
+            return f"{n}th"
 
 ################################################################################

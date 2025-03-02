@@ -74,6 +74,18 @@ class ProfileSection(ABC):
         raise NotImplementedError
 
 ################################################################################
+    @abstractmethod
+    def compile(self) -> Any:
+
+        raise NotImplementedError
+
+################################################################################
+    @abstractmethod
+    def progress(self) -> str:
+
+        raise NotImplementedError
+
+################################################################################
     async def menu(self, interaction: Interaction) -> None:
 
         embed = self.status()

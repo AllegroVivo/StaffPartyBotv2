@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import zoneinfo
 import os
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -16,6 +17,8 @@ from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
 from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
+from Classes.Profiles.ProfileManager import ProfileManager
+from Utilities import Utilities as U
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -37,6 +40,7 @@ class StaffPartyBot(Bot):
         "_bg_check_mgr",
         "_channel_mgr",
         "_role_mgr",
+        "_profile_mgr",
     )
 
     IMAGE_DUMP = 991902526188302427
@@ -75,6 +79,7 @@ class StaffPartyBot(Bot):
         self._position_mgr: PositionManager = PositionManager(self)
         self._venue_mgr: VenueManager = VenueManager(self)
         self._bg_check_mgr: BGCheckManager = BGCheckManager(self)
+        self._profile_mgr: ProfileManager = ProfileManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -122,6 +127,8 @@ class StaffPartyBot(Bot):
         await self._venue_mgr.load_all(payload["venue_manager"])
         print("Loading background checks...")
         await self._bg_check_mgr.load_all(payload["bg_check_manager"])
+        print("Loading profiles...")
+        await self._profile_mgr.load_all(payload["profile_manager"])
 
         print("Finalizing load...")
         await self._finalize_load()
@@ -191,6 +198,12 @@ class StaffPartyBot(Bot):
     def role_manager(self) -> RoleManager:
 
         return self._role_mgr
+
+################################################################################
+    @property
+    def profile_manager(self) -> ProfileManager:
+
+        return self._profile_mgr
 
 ################################################################################
     async def dump_image(self, image: Attachment) -> str:

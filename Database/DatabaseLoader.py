@@ -46,6 +46,7 @@ class DatabaseLoader:
                 selectinload(TopLevelDataModel.positions).selectinload(PositionModel.requirements),
                 selectinload(TopLevelDataModel.bg_checks).selectinload(BGCheckModel.venues),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.additional_images),
+                selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
             ).first()
             global_reqs = db.query(RequirementModel).filter_by(position_id=None).all()
 
@@ -87,7 +88,10 @@ class DatabaseLoader:
                     profiles=[
                         StaffProfileSchema.model_validate(
                             prof,
-                            context={"additional_images": map_schema(AdditionalImageSchema, prof.additional_images)}
+                            context={
+                                "availability": map_schema(ProfileAvailabilitySchema, prof.availability),
+                                "additional_images": map_schema(AdditionalImageSchema, prof.additional_images)
+                            }
                         ) for prof in top_level.profiles
                     ]
                 )

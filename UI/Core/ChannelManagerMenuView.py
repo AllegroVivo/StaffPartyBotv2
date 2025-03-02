@@ -50,7 +50,16 @@ class UpdateChannelButton(FroggeButton):
         self.purpose: ChannelPurpose = purpose
 
     def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.get_channel(self.purpose).id)
+        channel = self.view.ctx.get_channel(self.purpose)
+        if isinstance(channel, list):
+            if len(channel) == 0:
+                channel_id = None
+            else:
+                channel_id = channel[0].id
+        else:
+            channel_id = channel.id
+
+        self.set_style(channel_id)
 
     async def callback(self, interaction):
         await self.view.ctx.set_channel(interaction, self.purpose)

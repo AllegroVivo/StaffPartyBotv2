@@ -77,13 +77,10 @@ class ManagedObject(Identifiable, FroggeObject):
 ################################################################################
     async def remove(self, interaction: Interaction) -> None:
 
-        type_name = self.__class__.__name__
-        log.info(f"Removing {type_name}.")
-
         prompt = U.make_embed(
             title=f"Remove ",
             description=(
-                f"Are you sure you want to remove this {type_name}?"
+                f"Are you sure you want to remove this {self.__class__.__name__}?"
             )
         )
         view = ConfirmCancelView(interaction.user)
@@ -92,11 +89,8 @@ class ManagedObject(Identifiable, FroggeObject):
         await view.wait()
 
         if not view.complete or view.value is False:
-            log.debug(f"{type_name} removal cancelled.")
             return
 
         self.delete()
-
-        log.info(f"{type_name} removed.")
 
 ################################################################################

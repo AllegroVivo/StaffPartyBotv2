@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Type, List
+from typing import TYPE_CHECKING, Any, Dict, Type, List, Union
 
 from . import Models
 
@@ -77,7 +77,7 @@ class DatabaseUpdater:
         self._update_record(Models.BGCheckModel, bg.to_dict(), id=bg.id)
 
 ################################################################################
-    def profile(self, p: Profile) -> None:
+    def profile(self, p: Union[Profile, ProfileSection]) -> None:
 
         self._update_record(Models.StaffProfileModel, p.to_dict(), user_id=p.user_id)
 

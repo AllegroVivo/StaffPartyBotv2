@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import math
 import re
+import zoneinfo
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union, Literal, TYPE_CHECKING
+from typing import Any, List, Optional, Tuple, Union, Literal, TYPE_CHECKING, Dict
 
 import emoji
 from discord import (
@@ -39,31 +41,50 @@ TimestampStyle = Literal["f", "F", "d", "D", "t", "T", "R"]
 class Utilities:
     """A collection of utility functions for use in various parts of the bot."""
 
-    # TIMEZONE_OFFSETS = {
-    #     Timezone.MIT: pytz.timezone('Pacific/Midway'),
-    #     Timezone.HST: pytz.timezone('Pacific/Honolulu'),
-    #     Timezone.AST: pytz.timezone('US/Alaska'),
-    #     Timezone.PST: pytz.timezone('US/Pacific'),
-    #     Timezone.MST: pytz.timezone('US/Mountain'),
-    #     Timezone.CST: pytz.timezone('US/Central'),
-    #     Timezone.EST: pytz.timezone('US/Eastern'),
-    #     Timezone.PRT: pytz.timezone('America/Puerto_Rico'),
-    #     Timezone.AGT: pytz.timezone('America/Argentina/Buenos_Aires'),
-    #     Timezone.CAT: pytz.timezone('Africa/Harare'),
-    #     Timezone.UTC: pytz.timezone('UTC'),
-    #     Timezone.ECT: pytz.timezone('Europe/Paris'),
-    #     Timezone.EET: pytz.timezone('Europe/Bucharest'),
-    #     Timezone.EAT: pytz.timezone('Africa/Nairobi'),
-    #     Timezone.NET: pytz.timezone('Asia/Yerevan'),
-    #     Timezone.PLT: pytz.timezone('Asia/Karachi'),
-    #     Timezone.BST: pytz.timezone('Asia/Dhaka'),
-    #     Timezone.VST: pytz.timezone('Asia/Ho_Chi_Minh'),
-    #     Timezone.CTT: pytz.timezone('Asia/Shanghai'),
-    #     Timezone.JST: pytz.timezone('Asia/Tokyo'),
-    #     Timezone.AET: pytz.timezone('Australia/Sydney'),
-    #     Timezone.SST: pytz.timezone('Pacific/Guadalcanal'),
-    #     Timezone.NST: pytz.timezone('Pacific/Auckland'),
-    # }
+    TIMEZONE_OFFSETS: Dict[Timezone, ZoneInfo] = {
+        Timezone.MIT: ZoneInfo('Pacific/Midway'),
+        Timezone.HST: ZoneInfo('Pacific/Honolulu'),
+        Timezone.AST: ZoneInfo('US/Alaska'),
+        Timezone.PST: ZoneInfo('US/Pacific'),
+        Timezone.MST: ZoneInfo('US/Mountain'),
+        Timezone.CST: ZoneInfo('US/Central'),
+        Timezone.EST: ZoneInfo('US/Eastern'),
+        Timezone.PRT: ZoneInfo('America/Puerto_Rico'),
+        Timezone.AGT: ZoneInfo('America/Argentina/Buenos_Aires'),
+        Timezone.CAT: ZoneInfo('Africa/Harare'),
+        Timezone.GMT: ZoneInfo('UTC'),
+        Timezone.ECT: ZoneInfo('Europe/Paris'),
+        Timezone.EET: ZoneInfo('Europe/Bucharest'),
+        Timezone.EAT: ZoneInfo('Africa/Nairobi'),
+        Timezone.NET: ZoneInfo('Asia/Yerevan'),
+        Timezone.PLT: ZoneInfo('Asia/Karachi'),
+        Timezone.BST: ZoneInfo('Asia/Dhaka'),
+        Timezone.VST: ZoneInfo('Asia/Ho_Chi_Minh'),
+        Timezone.CTT: ZoneInfo('Asia/Shanghai'),
+        Timezone.JST: ZoneInfo('Asia/Tokyo'),
+        Timezone.AET: ZoneInfo('Australia/Sydney'),
+        Timezone.SST: ZoneInfo('Pacific/Guadalcanal'),
+        Timezone.NST: ZoneInfo('Pacific/Auckland'),
+    }
+
+    JOB_WEIGHTS = {
+        'gamba': 1,
+        'shout runner': 2,
+        'bartender': 3,
+        'greeter': 4,
+        'photographer': 5,
+        'dj': 6,
+        'courtesan': 7,
+        'exotic dancer': 8,
+        'host-dancer': 9,
+        'pillow': 10,
+        'security': 11,
+        'tarot reader': 12,
+        'manager': 13,
+        'rp flex': 14,
+        'pf attendant': 15,
+        'bard': 16
+    }
 
 ################################################################################
     @staticmethod

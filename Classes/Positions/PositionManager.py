@@ -9,10 +9,11 @@ from Errors import MaxItemsReached
 from UI.Positions import PositionManagerMenuView
 from .Position import Position
 from Utilities import Utilities as U
+from UI.Common import BasicTextModal, FroggeMultiMenuSelect
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot, Requirement
-    from UI.Common import FroggeView, BasicTextModal, FroggeMultiMenuSelect
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("PositionManager", )

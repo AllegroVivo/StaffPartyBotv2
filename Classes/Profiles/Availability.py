@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from datetime import time
 from typing import TYPE_CHECKING, List, Type, TypeVar, Union
 
@@ -17,7 +16,7 @@ __all_ = ("Availability",)
 A = TypeVar("A", bound="Availability")
 
 ################################################################################
-class Availability(Identifiable, ABC):
+class Availability(Identifiable):
 
     __slots__ = (
         "_parent",
@@ -29,13 +28,17 @@ class Availability(Identifiable, ABC):
     )
 
 ################################################################################
-    def __init__(self, parent: Union[Profile, TUser], id: int, **kwargs) -> None:
+    def __init__(self, parent: Profile, id: int, **kwargs) -> None:
 
         super().__init__(id)
 
-        self._parent: Union[Profile, TUser] = parent
+        self._parent: Profile = parent
 
-        self._day: Weekday = kwargs.get("day")
+        self._day: Weekday = (
+            Weekday(kwargs.get("day"))
+            if isinstance(kwargs.get("day"), int)
+            else kwargs.get("day")
+        )
         self._start_hour: int = kwargs.get("start_hour")
         self._start_minute: int = kwargs.get("start_minute")
         self._end_hour: int = kwargs.get("end_hour")
@@ -43,10 +46,9 @@ class Availability(Identifiable, ABC):
 
 ################################################################################
     @classmethod
-    @abstractmethod
     def new(
         cls: Type[A],
-        parent: Union[Profile, TUser],
+        parent: Profile,
         day: Weekday,
         start_hour: int,
         start_minute: int,
@@ -54,7 +56,10 @@ class Availability(Identifiable, ABC):
         end_minute: int
     ) -> A:
 
-        raise NotImplementedError
+        new_data = parent.bot.db.insert.availability(
+            parent.id, day.value, start_hour, start_minute, end_hour, end_minute
+        )
+        return cls(parent=parent, **new_data)
 
 ################################################################################
     @property
@@ -62,18 +67,6 @@ class Availability(Identifiable, ABC):
 
         return self._parent.bot
 
-################################################################################
-    @property
-    def parent(self) -> Union[Profile, TUser]:
-
-        return self._parent
-
-################################################################################
-    @property
-    def user_id(self) -> int:
-        
-        return self._parent.user_id
-    
 ################################################################################
     @property
     def day(self) -> Weekday:
@@ -113,45 +106,33 @@ class Availability(Identifiable, ABC):
 
         ret = ""
 
-        days_list = [a.day for a in availability]
-        for member in Weekday:
-            if member not in days_list:
-                ret += f"{member.proper_name}: `Not Available`\n"
+        for i in [w for w in Weekday]:
+            if i.value not in [a.day.value for a in availability]:
+                ret += f"{i.proper_name}: `Not Available`\n"
             else:
-                a = next((a for a in availability if a.day == member))
+                a = next((a for a in availability if a.day == i))
                 ret += (
                     f"{a.day.proper_name}: "
                     f"{a.start_timestamp} - {a.end_timestamp}\n"
                 )
 
-        return (
-            "*(Times are displayed in\n"
-            "your local time zone.)*\n\n"
-            
-            f"{ret}"
-        )
+        return "*(Times are displayed in\nyour local time zone.)*\n\n" + ret
 
 ################################################################################
     @staticmethod
     def short_availability_status(availability: List[Availability]) -> str:
 
-        if not availability:
-            return "`No Availability Set`"
-
-        ret = ""
-        for a in availability:
-            ret += (
+        return "\n".join([
+            (
                 f"{a.day.proper_name}: "
                 f"{a.start_timestamp} - {a.end_timestamp}\n"
-            )
-
-        return ret
+            ) for a in availability
+        ]) if availability else "`No Availability Set`"
 
 ################################################################################
-    @abstractmethod
     def delete(self) -> None:
 
-        raise NotImplementedError
+        self.bot.db.delete.profile_availability(self)
 
 ################################################################################
     def contains(self, range_start: time, range_end: time) -> bool:

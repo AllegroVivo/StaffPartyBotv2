@@ -125,7 +125,7 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating background check: {str(e)}")
 
 ################################################################################
-    def bg_check_venue(self, parent_id: int, name: str, data_center: int, world: int, jobs: List[str]):
+    def bg_check_venue(self, parent_id: int, name: str, data_center: int, world: int, jobs: List[str]) -> Dict[str, Any]:
 
         with self._parent._get_db() as db:
             try:
@@ -143,5 +143,62 @@ class DatabaseInserter:
             except Exception as e:
                 db.rollback()
                 raise ValueError(f"Error creating background check venue: {str(e)}")
+
+################################################################################
+    def availability(
+        self,
+        profile_id: int,
+        day: int,
+        start_hour: int,
+        start_minute: int,
+        end_hour: int,
+        end_minute: int
+    ) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_avail = ProfileAvailabilityModel(
+                    profile_id=profile_id,
+                    day=day,
+                    start_hour=start_hour,
+                    start_minute=start_minute,
+                    end_hour=end_hour,
+                    end_minute=end_minute
+                )
+                db.add(new_avail)
+                db.commit()
+                db.refresh(new_avail)
+                return ProfileAvailabilitySchema.model_validate(new_avail).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating profile availability: {str(e)}")
+
+################################################################################
+    def additional_image(self, profile_id: int, url: str, caption: Optional[str]) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_img = ProfileAdditionalImageModel(profile_id=profile_id, url=url, caption=caption)
+                db.add(new_img)
+                db.commit()
+                db.refresh(new_img)
+                return AdditionalImageSchema.model_validate(new_img).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating additional image: {str(e)}")
+
+################################################################################
+    def profile(self, user_id: int) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_profile = StaffProfileModel(user_id=user_id)
+                db.add(new_profile)
+                db.commit()
+                db.refresh(new_profile)
+                return StaffProfileSchema.model_validate(new_profile).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating profile: {str(e)}")
 
 ################################################################################

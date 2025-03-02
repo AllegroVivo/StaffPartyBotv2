@@ -10,7 +10,6 @@ from discord import (
     ChannelType,
     OptionChoice
 )
-from ._test import test_api_data_parsing
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot
@@ -115,9 +114,6 @@ class Admin(Cog):
     ) -> None:
 
         await self.bot.bg_check_manager.staff_experience(ctx.interaction, user)
-
-################################################################################
-
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:

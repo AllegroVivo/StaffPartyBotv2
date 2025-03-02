@@ -1,8 +1,8 @@
 """AUTO: Added profiles tables
 
-Revision ID: 5cdbda26f00c
+Revision ID: c415532ba9c5
 Revises: 46512a99ba96
-Create Date: 2025-02-26 19:59:30.144227
+Create Date: 2025-02-27 11:13:00.772074
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '5cdbda26f00c'
+revision: str = 'c415532ba9c5'
 down_revision: Union[str, None] = '46512a99ba96'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,7 +31,7 @@ def upgrade() -> None:
     sa.Column('rates', sa.String(), nullable=True),
     sa.Column('position_ids', sa.ARRAY(sa.Integer()), server_default='{}', nullable=False),
     sa.Column('dm_pref', sa.Boolean(), server_default='false', nullable=False),
-    sa.Column('timezone', sa.Integer(), nullable=True),
+    sa.Column('timezone', sa.String(), nullable=True),
     sa.Column('gender', sa.String(), nullable=True),
     sa.Column('pronouns', sa.ARRAY(sa.Integer()), server_default='{}', nullable=False),
     sa.Column('race', sa.String(), nullable=True),
@@ -58,6 +58,17 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['profile_id'], ['staff_profiles.user_id'], name='profile_additional_images_profile_fkey', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('profile_availabilities',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('profile_id', sa.Integer(), nullable=False),
+    sa.Column('day', sa.Integer(), nullable=False),
+    sa.Column('start_hour', sa.Integer(), nullable=False),
+    sa.Column('start_minute', sa.Integer(), nullable=False),
+    sa.Column('end_hour', sa.Integer(), nullable=False),
+    sa.Column('end_minute', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['profile_id'], ['staff_profiles.user_id'], name='profile_availability_profile_fkey', ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.add_column('top_level', sa.Column('staff_role_id', sa.BigInteger(), nullable=True))
     op.add_column('top_level', sa.Column('staff_pending_role_id', sa.BigInteger(), nullable=True))
     op.add_column('top_level', sa.Column('venue_management_role_id', sa.BigInteger(), nullable=True))
@@ -73,6 +84,7 @@ def downgrade() -> None:
     op.drop_column('top_level', 'venue_management_role_id')
     op.drop_column('top_level', 'staff_pending_role_id')
     op.drop_column('top_level', 'staff_role_id')
+    op.drop_table('profile_availabilities')
     op.drop_table('profile_additional_images')
     op.drop_table('staff_profiles')
     # ### end Alembic commands ###

@@ -8,10 +8,11 @@ from Classes.Common import ManagedObject, LazyRole
 from Errors import MaxItemsReached
 from UI.Positions import PositionStatusView
 from Utilities import Utilities as U
+from UI.Common import BasicTextModal, FroggeMultiMenuSelect
 
 if TYPE_CHECKING:
     from Classes import PositionManager, Requirement
-    from UI.Common import FroggeView, BasicTextModal, FroggeMultiMenuSelect
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("Position", )

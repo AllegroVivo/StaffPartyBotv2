@@ -70,6 +70,25 @@ class Venues(Cog):
         await self.bot.venue_manager.toggle_user_mute(ctx.interaction, name, user)
 
 ################################################################################
+    @venues.command(
+        name="profile",
+        description="View and edit your venue's internship profile & status.",
+        contexts=[InteractionContextType.guild]
+    )
+    async def venue_profile(
+        self,
+        ctx: ApplicationContext,
+        name: Option(
+            SlashCommandOptionType.string,
+            name="name",
+            description="The name of the venue.",
+            required=True
+        )
+    ) -> None:
+
+        await self.bot.venue_manager.venue_menu(ctx.interaction, name)
+
+################################################################################
 def setup(bot: "StaffPartyBot") -> None:
 
     bot.add_cog(Venues(bot))

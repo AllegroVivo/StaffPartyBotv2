@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, Type, TypeVar
 
 from discord import SelectOption, Interaction
@@ -18,14 +17,15 @@ __all__ = ("BGCheckVenue", )
 V = TypeVar("V", bound="BGCheckVenue")
 
 ################################################################################
-@dataclass
 class BGCheckVenue:
 
-    id: int
-    name: str
-    data_center: DataCenter
-    world: GameWorld
-    jobs: List[str]
+    def __init__(self, **kwargs):
+
+        self.id: int = kwargs.pop("id")
+        self.name: str = kwargs.pop("name")
+        self.data_center: DataCenter = DataCenter(kwargs.pop("data_center"))
+        self.world: GameWorld = GameWorld(kwargs.pop("world"))
+        self.jobs: List[str] = kwargs.pop("jobs")
 
 ################################################################################
     @classmethod

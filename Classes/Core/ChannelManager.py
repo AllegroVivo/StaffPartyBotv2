@@ -172,7 +172,7 @@ class ChannelManager:
                     name="__Bot Restart Notification Channels__",
                     value=(
                         "\n".join(channel.mention for channel in restart_notifications)
-                    ) if self.restart_notification_channels else "`Not Set`",
+                    ) if await self.restart_notification_channels else "`Not Set`",
                     inline=False
                 ),
             ]

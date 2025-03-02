@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, List, Optional, Type, Dict, Any
 
-from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel, ForumTag, NotFound, Colour
+from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel, ForumTag, NotFound, Colour, Thread
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
@@ -500,7 +500,7 @@ class Venue(ManagedObject):
                 # If no existing thread, create a new one
                 thread = await channel.create_thread(
                     name=self.name, embed=await self.status(post=True),
-                    applied_tags=self.thread_tags, view=view
+                    applied_tags=await self.thread_tags(), view=view
                 )
             # Grab the message we just posted
             try:
@@ -622,10 +622,8 @@ class Venue(ManagedObject):
 
         post_message = await self.post_message
         if post_message is not None:
-            try:
-                await post_message.delete()
-            except NotFound:
-                pass
+            if isinstance(post_message.channel, Thread):
+                await post_message.channel.delete()
 
         confirm = U.make_embed(
             title="Venue Removed",

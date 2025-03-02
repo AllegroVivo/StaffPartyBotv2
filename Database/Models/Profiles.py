@@ -4,7 +4,23 @@ from sqlalchemy.orm import relationship
 from .Base import Base
 ################################################################################
 
-__all__ = ("ProfileAdditionalImageModel", "StaffProfileModel")
+__all__ = ("ProfileAdditionalImageModel", "StaffProfileModel", "ProfileAvailabilityModel")
+
+################################################################################
+class ProfileAvailabilityModel(Base):
+
+    __tablename__ = "profile_availabilities"
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey("staff_profiles.user_id", name="profile_availability_profile_fkey", ondelete="CASCADE"), nullable=False)
+    day = Column(Integer, nullable=False)
+    start_hour = Column(Integer, nullable=False)
+    start_minute = Column(Integer, nullable=False)
+    end_hour = Column(Integer, nullable=False)
+    end_minute = Column(Integer, nullable=False)
+
+    # Relationships
+    profile = relationship("StaffProfileModel", back_populates="availability", passive_deletes=True)
 
 ################################################################################
 class ProfileAdditionalImageModel(Base):
@@ -36,7 +52,7 @@ class StaffProfileModel(Base):
     rates = Column(String, nullable=True)
     position_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
     dm_pref = Column(Boolean, nullable=False, server_default="false")
-    timezone = Column(Integer, nullable=True)
+    timezone = Column(String, nullable=True)
     # At A Glance
     gender = Column(String, nullable=True)
     pronouns = Column(ARRAY(Integer), nullable=False, server_default="{}")
@@ -59,5 +75,6 @@ class StaffProfileModel(Base):
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="profiles", passive_deletes=True)
     additional_images = relationship("ProfileAdditionalImageModel", back_populates="profile", passive_deletes=True)
+    availability = relationship("ProfileAvailabilityModel", back_populates="profile", passive_deletes=True)
 
 ################################################################################

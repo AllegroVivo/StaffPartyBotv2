@@ -7,7 +7,21 @@ __all__ = (
     "AdditionalImageSchema",
     "StaffProfileSchema",
     "ProfileManagerSchema",
+    "ProfileAvailabilitySchema",
 )
+
+################################################################################
+class ProfileAvailabilitySchema(BaseModel):
+
+    id: int
+    day: int
+    start_hour: int
+    start_minute: int
+    end_hour: int
+    end_minute: int
+
+    class Config:
+        from_attributes = True
 
 ################################################################################
 class AdditionalImageSchema(BaseModel):
@@ -32,7 +46,8 @@ class StaffProfileSchema(BaseModel):
     rates: Optional[str]
     position_ids: List[int]
     dm_pref: bool
-    timezone: Optional[int]
+    timezone: Optional[str]
+    availability: List[ProfileAvailabilitySchema] = []
     # At A Glance
     gender: Optional[str]
     pronouns: List[int]

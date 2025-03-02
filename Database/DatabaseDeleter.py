@@ -60,3 +60,13 @@ class DatabaseDeleter:
         self._delete_record(Models.VenueModel, venue_id)
 
 ################################################################################
+    def additional_image(self, image_id: int) -> None:
+
+        self._delete_record(Models.ProfileAdditionalImageModel, image_id)
+
+################################################################################
+    def profile(self, profile_id: int) -> None:
+
+        self._delete_record(Models.StaffProfileModel, profile_id)
+
+################################################################################
