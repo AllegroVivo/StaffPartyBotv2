@@ -4,6 +4,7 @@ from .Gender import Gender
 from .Pronoun import Pronoun
 from .Hours import Hours
 from .Minutes import Minutes
+from .JobPostingType import JobPostingType
 from .Race import Race
 from .Clan import Clan
 from .Orientation import Orientation
