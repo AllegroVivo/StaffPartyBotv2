@@ -12,7 +12,7 @@ class ProfileAvailabilityModel(Base):
     __tablename__ = "profile_availabilities"
 
     id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey("staff_profiles.user_id", name="profile_availability_profile_fkey", ondelete="CASCADE"), nullable=False)
+    profile_id = Column(BigInteger, ForeignKey("staff_profiles.user_id", name="profile_availability_profile_fkey", ondelete="CASCADE"), nullable=False)
     day = Column(Integer, nullable=False)
     start_hour = Column(Integer, nullable=False)
     start_minute = Column(Integer, nullable=False)
@@ -28,7 +28,7 @@ class ProfileAdditionalImageModel(Base):
     __tablename__ = "profile_additional_images"
 
     id = Column(Integer, primary_key=True)
-    profile_id = Column(Integer, ForeignKey("staff_profiles.user_id", name="profile_additional_images_profile_fkey", ondelete="CASCADE"), nullable=False)
+    profile_id = Column(BigInteger, ForeignKey("staff_profiles.user_id", name="profile_additional_images_profile_fkey", ondelete="CASCADE"), nullable=False)
     url = Column(String, nullable=False)
     caption = Column(String, nullable=True)
 
@@ -71,6 +71,9 @@ class StaffProfileModel(Base):
     # Images
     thumbnail_url = Column(String, nullable=True)
     main_image_url = Column(String, nullable=True)
+    # Other
+    muted_venue_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
+    hiatus = Column(Boolean, nullable=False, server_default="false")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="profiles", passive_deletes=True)

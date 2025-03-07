@@ -27,6 +27,7 @@ class BasicTextModal(FroggeModal):
         required: bool = True,
         instructions: Optional[InstructionsInfo] = None,
         multiline: bool = False,
+        return_interaction: bool = False,
     ):
 
         super().__init__(title=title)
@@ -57,15 +58,19 @@ class BasicTextModal(FroggeModal):
             )
         )
 
+        self._return_interaction: bool = return_interaction
+
     async def callback(self, interaction: Interaction):
-        self.value = (
+        result = (
             (self.children[1].value or None)
             if len(self.children) == 2
             else (self.children[0].value or None)
         )
+        self.value = (result, interaction) if self._return_interaction else result
         self.complete = True
 
-        await self.dummy_response(interaction)
+        if not self._return_interaction:
+            await self.dummy_response(interaction)
         self.stop()
 
 ################################################################################

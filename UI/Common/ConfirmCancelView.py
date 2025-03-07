@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Optional
 
 from discord import ButtonStyle, Interaction, Member, User
 from discord.ui import Button
@@ -20,23 +20,25 @@ class ConfirmCancelView(FroggeView):
         show_cancel: bool = True,
         confirm_text: str = "Confirm",
         cancel_text: str = "Cancel",
+        confirm_style: Optional[ButtonStyle] = None,
+        cancel_style: Optional[ButtonStyle] = None,
         **kwargs
     ):
 
         self.return_interaction: bool = return_interaction
         super().__init__(owner, None, **kwargs)
 
-        self.add_item(ConfirmCancelButton(confirm_text, 1))
+        self.add_item(ConfirmCancelButton(confirm_text, confirm_style, 1))
         if show_cancel:
-            self.add_item(ConfirmCancelButton(cancel_text, 2))
+            self.add_item(ConfirmCancelButton(cancel_text, cancel_style, 2))
 
 ################################################################################
 class ConfirmCancelButton(Button):
 
-    def __init__(self, text: str, button_type: int):
+    def __init__(self, text: str, style: Optional[ButtonStyle], button_type: int):
 
         super().__init__(
-            style=(
+            style=style or (
                 ButtonStyle.success
                 if button_type == 1
                 else ButtonStyle.danger

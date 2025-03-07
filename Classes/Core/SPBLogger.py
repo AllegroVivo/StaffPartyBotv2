@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Optional
 
-from discord import Embed, Message, TextChannel, User, EmbedField
+from discord import Embed, Message, TextChannel, User, EmbedField, Member
 
 from UI.BackgroundChecks import BGCheckApprovalView
 from Utilities import Utilities as U
@@ -164,6 +164,95 @@ class SPBLogger:
             title="Venue Removed!",
             description=(
                 f"Venue `{venue.name}` has been removed from the system!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def on_member_join(self, member: Member) -> None:
+
+        await self._log(U.make_embed(
+            title=f"Member Joined!",
+            description=f"{member.mention} has joined the server!",
+            thumbnail_url=member.display_avatar.url,
+            timestamp=True
+        ))
+
+################################################################################
+    async def on_member_leave(
+        self,
+        member: Member,
+        venue_deleted: bool,
+        profile_deleted: bool,
+        jobs_deleted: int,
+        jobs_canceled: int,
+    ) -> None:
+
+        profile = self.bot.profile_manager.get_profile(member.id)
+        qualifications = ", ".join(
+            [p.name for p in profile.details.positions]
+        ) if profile is not None else "`None`"
+
+        venue_emoji = U.yes_no_emoji(venue_deleted)
+        profile_emoji = U.yes_no_emoji(profile_deleted)
+
+        embed = U.make_embed(
+            title=f"Member Left!",
+            description=f"{member.mention} has left the server!",
+            fields=[
+                ("__Owned Qualifications__", qualifications, False),
+                ("__Jobs Deleted__", f"`{jobs_deleted}`", True),
+                ("__Jobs Re-Opened__", f"`{jobs_canceled}`", True),
+                ("** **", "** **", False),
+                ("__Venue Deleted__", venue_emoji, True),
+                ("__Profile Deleted__", profile_emoji, True)
+            ],
+            thumbnail_url=member.display_avatar.url,
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def temp_job_posted(self, job: TemporaryJobPosting) -> None:
+
+        embed = U.make_embed(
+            title="Temporary Job Posted!",
+            description=(
+                f"New temporary job posting for `{job.position.name}` has "
+                f"been posted by `{job.venue.name}`!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def temp_job_accepted(self, job: TemporaryJobPosting) -> None:
+
+        embed = U.make_embed(
+            title="Temporary Job Accepted!",
+            description=(
+                f"Temporary job posting for `{job.position.name}` at "
+                f"`{job.venue.name}` has been accepted by "
+                f"`{(await job.candidate).display_name}`!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def temp_job_canceled(self, job: TemporaryJobPosting) -> None:
+
+        embed = U.make_embed(
+            title="Temporary Job Rejected!",
+            description=(
+                f"Temporary job posting for `{job.position.name}` at "
+                f"`{job.venue.name}` has been canceled by "
+                f"`{(await job.candidate).display_name}`!"
             ),
             timestamp=True
         )

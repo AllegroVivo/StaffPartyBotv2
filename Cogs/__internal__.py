@@ -20,36 +20,28 @@ class Internal(Cog):
         print("Loading internals...")
         await self.bot.load_all()
 
-        # print("Starting tasks...")
-        # self.cull_job_postings.start()
-        # self.training_reminder.start()
+        print("Starting tasks...")
+        self.cull_job_postings.start()
         
         print(f"{self.bot.__class__.__name__} Online!")
 
 ################################################################################
-    @Cog.listener("on_guild_join")
-    async def on_guild_join(self, guild) -> None:
+    @Cog.listener("on_member_join")
+    async def on_member_join(self, member) -> None:
 
-        await self.bot.add_guild(guild)
-
-################################################################################
-    # @Cog.listener("on_member_join")
-    # async def on_member_join(self, member) -> None:
-    #
-    #     await self.bot[member.guild.id].on_member_join(member)
+        await self.bot.on_member_join(member)
         
 ################################################################################
-    # @Cog.listener("on_member_remove")
-    # async def on_member_remove(self, member) -> None:
-    #
-    #     await self.bot[member.guild.id].on_member_leave(member)
+    @Cog.listener("on_member_remove")
+    async def on_member_remove(self, member) -> None:
+
+        await self.bot.on_member_leave(member)
         
 ################################################################################
-    # @tasks.loop(minutes=30)
-    # async def cull_job_postings(self) -> None:
-    #
-    #     for f in self.bot.guild_manager.fguilds:
-    #         await f.jobs_manager.cull_job_postings()
+    @tasks.loop(minutes=30)
+    async def cull_job_postings(self) -> None:
+
+        await self.bot.jobs_manager.cull_postings()
         
 ################################################################################
 def setup(bot: StaffPartyBot) -> None:

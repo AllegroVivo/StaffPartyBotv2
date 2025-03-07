@@ -70,3 +70,13 @@ class DatabaseDeleter:
         self._delete_record(Models.StaffProfileModel, profile_id)
 
 ################################################################################
+    def profile_availability(self, avail_id: int) -> None:
+
+        self._delete_record(Models.ProfileAvailabilityModel, avail_id)
+
+################################################################################
+    def temporary_job(self, job_id: int) -> None:
+
+        self._delete_record(Models.TemporaryJobPostingModel, job_id)
+
+################################################################################

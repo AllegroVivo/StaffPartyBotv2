@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from datetime import time
+from zoneinfo import ZoneInfo
+from datetime import time, date, datetime, timedelta
 from typing import TYPE_CHECKING, List, Type, TypeVar, Union
+from zoneinfo import ZoneInfo
 
 from Classes.Common import Identifiable
 from Enums import Weekday
@@ -89,13 +91,31 @@ class Availability(Identifiable):
     @property
     def start_timestamp(self) -> str:
 
-        return U.format_dt(U.time_to_datetime(self.start_time), "t")
+        next_date = self.get_local_date_for_weekday(self._parent.details.timezone, self.day.value)
+        dt = datetime(
+            year=next_date.year,
+            month=next_date.month,
+            day=next_date.day,
+            hour=self.start_time.hour,
+            minute=self.start_time.minute,
+            tzinfo=ZoneInfo("UTC")
+        )
+        return U.format_dt(dt.replace(tzinfo=ZoneInfo("UTC")), "t")
 
 ################################################################################
     @property
     def end_timestamp(self) -> str:
 
-        return U.format_dt(U.time_to_datetime(self.end_time), "t")
+        next_date = self.get_local_date_for_weekday(self._parent.details.timezone, self.day.value)
+        dt = datetime(
+            year=next_date.year,
+            month=next_date.month,
+            day=next_date.day,
+            hour=self.end_time.hour,
+            minute=self.end_time.minute,
+            tzinfo=ZoneInfo("UTC")
+        )
+        return U.format_dt(dt.replace(tzinfo=ZoneInfo("UTC")), "t")
 
 ################################################################################
     @staticmethod
@@ -106,6 +126,7 @@ class Availability(Identifiable):
 
         ret = ""
 
+        availability.sort(key=lambda x: x.day.value)
         for i in [w for w in Weekday]:
             if i.value not in [a.day.value for a in availability]:
                 ret += f"{i.proper_name}: `Not Available`\n"
@@ -122,6 +143,7 @@ class Availability(Identifiable):
     @staticmethod
     def short_availability_status(availability: List[Availability]) -> str:
 
+        availability.sort(key=lambda x: x.day.value)
         return "\n".join([
             (
                 f"{a.day.proper_name}: "
@@ -132,7 +154,7 @@ class Availability(Identifiable):
 ################################################################################
     def delete(self) -> None:
 
-        self.bot.db.delete.profile_availability(self)
+        self.bot.db.delete.profile_availability(self.id)
 
 ################################################################################
     def contains(self, range_start: time, range_end: time) -> bool:
@@ -140,4 +162,28 @@ class Availability(Identifiable):
         return self.start_time <= range_start and self.end_time >= range_end
 
 ################################################################################
-    
+    @staticmethod
+    def get_local_date_for_weekday(user_tz: ZoneInfo, selected_weekday: int) -> date:
+        """
+        Returns the date of the next occurrence of `selected_weekday` (0=Monday ... 6=Sunday)
+        in the user's local timezone, based on 'now' in that same timezone.
+        """
+        # Current local date/time
+        now_local = datetime.now(user_tz)
+        today_local = now_local.date()
+        # Monday=0 ... Sunday=6 in Python's weekday(), but your Weekday enum might differ.
+        # Let's assume your "weekday.value" is also 0=Monday..6=Sunday. If not, adjust accordingly.
+
+        today_wkday = now_local.weekday()  # 0=Monday..6=Sunday
+        # The difference from the current day to the target day
+        day_diff = (selected_weekday - today_wkday) % 7
+
+        # If day_diff=0, that means "today" is already the chosen weekday.
+        # If you want the *next* occurrence (not the current day), and day_diff=0, you could add 7.
+        # For this example, we'll allow the same day if times are in the future.
+        # day_diff = 7 if day_diff == 0 else day_diff
+
+        chosen_date = today_local + timedelta(days=day_diff)
+        return chosen_date
+
+################################################################################

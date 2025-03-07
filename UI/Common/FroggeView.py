@@ -85,7 +85,8 @@ class FroggeView(View):
 
         try:
             await interaction.message.edit(*args, view=kwargs.pop("view", self), **kwargs)
-        except Exception:
+        except Exception as ex2:
+            # print(f"Edit Message Helper FAILED: {ex2}")
             try:
                 await interaction.edit_original_response(*args, view=kwargs.pop("view", self), **kwargs)
             except Exception as ex3:

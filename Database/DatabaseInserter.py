@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import re
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Any, Dict
-from uuid import uuid4
 
 from discord import Guild
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import selectinload
 
 from .Models import *
 from .Schemas import *
@@ -200,5 +197,36 @@ class DatabaseInserter:
             except Exception as e:
                 db.rollback()
                 raise ValueError(f"Error creating profile: {str(e)}")
+
+################################################################################
+    def temporary_job(
+        self,
+        venue_id: int,
+        user_id: int,
+        position_id: int,
+        description: str,
+        salary: str,
+        start_dt: datetime,
+        end_dt: datetime
+    ) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_job = TemporaryJobPostingModel(
+                    venue_id=venue_id,
+                    user_id=user_id,
+                    position_id=position_id,
+                    description=description,
+                    salary=salary,
+                    start_dt=start_dt,
+                    end_dt=end_dt
+                )
+                db.add(new_job)
+                db.commit()
+                db.refresh(new_job)
+                return TemporaryJobPostingSchema.model_validate(new_job).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating temporary job: {str(e)}")
 
 ################################################################################

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Any, Optional, List, Type
+from typing import TYPE_CHECKING, Dict, Any, Optional, List, Type, TypeVar
 from sqlalchemy.orm import selectinload
 
 from .Models import *
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 ################################################################################
 
 __all__ = ("DatabaseLoader",)
+
+T = TypeVar("T")
 
 ################################################################################
 class DatabaseLoader:
@@ -47,10 +49,12 @@ class DatabaseLoader:
                 selectinload(TopLevelDataModel.bg_checks).selectinload(BGCheckModel.venues),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.additional_images),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
+                selectinload(TopLevelDataModel.temporary_jobs),
+                selectinload(TopLevelDataModel.permanent_jobs),
             ).first()
             global_reqs = db.query(RequirementModel).filter_by(position_id=None).all()
 
-            def map_schema(schema: Type[BaseModel], objects: List[Any]) -> List[BaseModel]:
+            def map_schema(schema: Type[T], objects: List[Any]) -> List[T]:
                 return [schema.model_validate(obj) for obj in objects]
 
             return MasterResponseSchema(
@@ -94,6 +98,10 @@ class DatabaseLoader:
                             }
                         ) for prof in top_level.profiles
                     ]
+                ),
+                jobs_manager=JobsManagerSchema(
+                    temporary_jobs=map_schema(TemporaryJobPostingSchema, top_level.temporary_jobs),
+                    permanent_jobs=map_schema(PermanentJobPostingSchema, top_level.permanent_jobs)
                 )
             ).model_dump()
 

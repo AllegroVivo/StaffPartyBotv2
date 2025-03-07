@@ -23,9 +23,9 @@ class ChannelManager:
         "_venues",
         "_log",
         "_temp_jobs",
+        "_perm_jobs",
         "_profiles",
         "_welcome",
-        "_group_training",
         "_restart_notifs",
     )
 
@@ -37,9 +37,9 @@ class ChannelManager:
         self._venues: LazyChannel = LazyChannel(self, None)
         self._log: LazyChannel = LazyChannel(self, None)
         self._temp_jobs: LazyChannel = LazyChannel(self, None)
+        self._perm_jobs: LazyChannel = LazyChannel(self, None)
         self._profiles: LazyChannel = LazyChannel(self, None)
         self._welcome: LazyChannel = LazyChannel(self, None)
-        self._group_training: LazyChannel = LazyChannel(self, None)
         self._restart_notifs: List[LazyChannel] = []
 
 ################################################################################
@@ -48,9 +48,9 @@ class ChannelManager:
         self._venues = LazyChannel(self, data.get("venue_channel_id"))
         self._log = LazyChannel(self, data.get("log_channel_id"))
         self._temp_jobs = LazyChannel(self, data.get("temp_job_channel_id"))
+        self._perm_jobs = LazyChannel(self, data.get("perm_jobs_channel_id"))
         self._profiles = LazyChannel(self, data.get("profile_channel_id"))
         self._welcome = LazyChannel(self, data.get("welcome_channel_id"))
-        self._group_training = LazyChannel(self, data.get("group_training_channel_id"))
         self._restart_notifs = [
             LazyChannel(self, channel_id)
             for channel_id
@@ -81,6 +81,11 @@ class ChannelManager:
 
         return await self._temp_jobs.get()
 
+    @property
+    async def perm_jobs_channel(self) -> Optional[ForumChannel]:
+
+        return await self._perm_jobs.get()
+
 ################################################################################
     @property
     async def profiles_channel(self) -> Optional[ForumChannel]:
@@ -92,12 +97,6 @@ class ChannelManager:
     async def welcome_channel(self) -> Optional[TextChannel]:
 
         return await self._welcome.get()
-
-################################################################################
-    @property
-    async def group_training_channel(self) -> Optional[TextChannel]:
-
-        return await self._group_training.get()
 
 ################################################################################
     @property
@@ -117,9 +116,9 @@ class ChannelManager:
             "venue_channel_id": self._venues.id,
             "log_channel_id": self._log.id,
             "temp_job_channel_id": self._temp_jobs.id,
+            "perm_jobs_channel_id": self._perm_jobs.id,
             "profile_channel_id": self._profiles.id,
             "welcome_channel_id": self._welcome.id,
-            "group_training_channel_id": self._group_training.id,
             "restart_channel_ids": [channel.id for channel in self._restart_notifs],
         }
 
@@ -130,9 +129,12 @@ class ChannelManager:
         log_channel = await self.log_channel
         profiles_channel = await self.profiles_channel
         temp_job_channel = await self.temp_jobs_channel
+        perm_jobs_channel = await self.perm_jobs_channel
         welcome_channel = await self.welcome_channel
-        group_training_channel = await self.group_training_channel
         restart_notifications = await self.restart_notification_channels
+
+        def _mention(channel: Optional[TextChannel]) -> str:
+            return channel.mention if channel else "`Not Set`"
 
         return U.make_embed(
             title="__Channels Status__",
@@ -140,39 +142,39 @@ class ChannelManager:
             fields=[
                 EmbedField(
                     name="__Welcome Channel__",
-                    value=welcome_channel.mention if welcome_channel else "`Not Set`",
+                    value=_mention(welcome_channel),
                     inline=False
                 ),
                 EmbedField(
                     name="__Log Stream__",
-                    value=log_channel.mention if log_channel else "`Not Set`",
+                    value=_mention(log_channel),
                     inline=False
                 ),
                 EmbedField(
                     name="__Staff Profiles__",
-                    value=profiles_channel.mention if profiles_channel else "`Not Set`",
+                    value=_mention(profiles_channel),
                     inline=False
                 ),
                 EmbedField(
                     name="__Venue Profiles__",
-                    value=venue_channel.mention if venue_channel else "`Not Set`",
+                    value=_mention(venue_channel),
                     inline=False
                 ),
                 EmbedField(
                     name="__Temporary Jobs__",
-                    value=temp_job_channel.mention if temp_job_channel else "`Not Set`",
+                    value=_mention(temp_job_channel),
                     inline=False
                 ),
                 EmbedField(
-                    name="__Group Training__",
-                    value=group_training_channel.mention if group_training_channel else "`Not Set`",
+                    name="__Permanent Jobs__",
+                    value=_mention(perm_jobs_channel),
                     inline=False
                 ),
                 EmbedField(
                     name="__Bot Restart Notification Channels__",
                     value=(
                         "\n".join(channel.mention for channel in restart_notifications)
-                    ) if await self.restart_notification_channels else "`Not Set`",
+                    ) if restart_notifications else "`Not Set`",
                     inline=False
                 ),
             ]
@@ -195,6 +197,8 @@ class ChannelManager:
                 return self._log
             case ChannelPurpose.TempJobs:
                 return self._temp_jobs
+            case ChannelPurpose.PermJobs:
+                return self._perm_jobs
             case ChannelPurpose.Venues:
                 return self._venues
             case ChannelPurpose.Profiles:
@@ -203,8 +207,6 @@ class ChannelManager:
                 return self._welcome
             case ChannelPurpose.BotNotify:
                 return self._restart_notifs  # type: ignore
-            case ChannelPurpose.GroupTraining:
-                return self._group_training
             case _:
                 raise ValueError(f"Invalid channel purpose: {purpose}")
 
@@ -212,7 +214,8 @@ class ChannelManager:
     async def set_channel(self, interaction: Interaction, _type: ChannelPurpose) -> None:
 
         restrictions = [ChannelType.forum] if _type in (
-            ChannelPurpose.Venues, ChannelPurpose.Profiles, ChannelPurpose.TempJobs
+            ChannelPurpose.Venues, ChannelPurpose.Profiles,
+            ChannelPurpose.TempJobs, ChannelPurpose.PermJobs,
         ) else [ChannelType.text]
 
         channel = await U.select_channel(
@@ -234,12 +237,12 @@ class ChannelManager:
             case ChannelPurpose.TempJobs:
                 assert isinstance(channel, ForumChannel)
                 self._temp_jobs.set(channel)
+            case ChannelPurpose.PermJobs:
+                assert isinstance(channel, ForumChannel)
+                self._perm_jobs.set(channel)
             case ChannelPurpose.Welcome:
                 assert isinstance(channel, TextChannel)
                 self._welcome.set(channel)
-            case ChannelPurpose.GroupTraining:
-                assert isinstance(channel, TextChannel)
-                self._group_training.set(channel)
             case ChannelPurpose.BotNotify:
                 assert isinstance(channel, TextChannel)
                 self._restart_notifs.append(LazyChannel(self, channel.id))

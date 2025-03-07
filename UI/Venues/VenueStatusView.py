@@ -28,6 +28,7 @@ class VenueStatusView(FroggeView):
             SetPositionsButton(),
             LogoButton(),
             MuteReportButton(),
+            CreateTempJobButton(),
             PostVenueButton(),
             UpdateVenueButton(),
             CloseMessageButton()
@@ -151,6 +152,21 @@ class MuteReportButton(FroggeButton):
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.mute_list_report(interaction)
         
+################################################################################
+class CreateTempJobButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.primary,
+            label="Create Temp Job",
+            row=1,
+            disabled=False
+        )
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.temp_job_wizard(interaction)
+
 ################################################################################
 class PostVenueButton(Button):
 

@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import zoneinfo
 import os
+from datetime import timedelta
 from typing import TYPE_CHECKING, Optional, Union
 
+import cloudinary
+import cloudinary.uploader
 from discord import Bot, Attachment, Guild, NotFound, Member, User, Message, Interaction
 from discord.abc import GuildChannel
 from dotenv import load_dotenv
+from discord.ext import tasks
+import discord.utils
 
 from Classes.BackgroundChecks.BGCheckManager import BGCheckManager
 from Classes.Positions.PositionManager import PositionManager
@@ -18,6 +23,7 @@ from .GuildManager import GuildManager
 from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
 from Classes.Profiles.ProfileManager import ProfileManager
+from Classes.Jobs.JobPostingManager import JobPostingManager
 from Utilities import Utilities as U
 
 if TYPE_CHECKING:
@@ -28,20 +34,6 @@ __all__ = ("StaffPartyBot", )
 
 ################################################################################
 class StaffPartyBot(Bot):
-
-    __slots__ = (
-        "_guild_mgr",
-        "_img_dump",
-        "_db",
-        "_xiv_client",
-        "_venue_mgr",
-        "_logger",
-        "_position_mgr",
-        "_bg_check_mgr",
-        "_channel_mgr",
-        "_role_mgr",
-        "_profile_mgr",
-    )
 
     IMAGE_DUMP = 991902526188302427
     SPB_ID = 1104515062187708525
@@ -80,6 +72,7 @@ class StaffPartyBot(Bot):
         self._venue_mgr: VenueManager = VenueManager(self)
         self._bg_check_mgr: BGCheckManager = BGCheckManager(self)
         self._profile_mgr: ProfileManager = ProfileManager(self)
+        self._jobs_mgr: JobPostingManager = JobPostingManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -93,9 +86,18 @@ class StaffPartyBot(Bot):
         self._img_dump = await self.fetch_channel(self.IMAGE_DUMP)
         print("Dump channels loaded.")
 
+        print("Loading Cloudinary Client...")
+        load_dotenv()
+        cloudinary.config(
+            cloud_name=os.getenv("CLOUD_NAME"),
+            api_key=os.getenv("CLOUD_API_KEY"),
+            api_secret=os.getenv("CLOUD_API_SECRET"),
+            secure=True
+        )
+
         payload = self.db.load_all()
         if not payload:
-            raise Exception("No guild data found in the database.")
+            raise Exception("No data found in the database.")
 
         print("Initializing logger...")
         await self._logger.load_all()
@@ -129,6 +131,8 @@ class StaffPartyBot(Bot):
         await self._bg_check_mgr.load_all(payload["bg_check_manager"])
         print("Loading profiles...")
         await self._profile_mgr.load_all(payload["profile_manager"])
+        print("Loading jobs...")
+        await self._jobs_mgr.load_all(payload["jobs_manager"])
 
         print("Finalizing load...")
         await self._finalize_load()
@@ -149,6 +153,12 @@ class StaffPartyBot(Bot):
     def db(self) -> Database:
 
         return self._db
+
+################################################################################
+    @property
+    def SPB_GUILD(self) -> Guild:
+
+        return self.get_guild(self.SPB_ID)
 
 ################################################################################
     @property
@@ -206,12 +216,25 @@ class StaffPartyBot(Bot):
         return self._profile_mgr
 
 ################################################################################
+    @property
+    def jobs_manager(self) -> JobPostingManager:
+
+        return self._jobs_mgr
+
+################################################################################
     async def dump_image(self, image: Attachment) -> str:
 
         file = await image.to_file()
         post = await self._img_dump.send(file=file)
 
         return post.attachments[0].url
+
+################################################################################
+    @staticmethod
+    async def dump_image_cloudinary(image: Attachment) -> str:
+
+        ret = cloudinary.uploader.upload(await image.read())
+        return ret["secure_url"]
 
 ################################################################################
     async def add_guild(self, guild: Guild) -> None:
@@ -292,5 +315,82 @@ class StaffPartyBot(Bot):
         ]
 
         await interaction.respond(files=files, delete_after=300)
+
+################################################################################
+    async def on_member_leave(self, member: Member) -> None:
+
+        venue_deleted = await self.venue_manager.on_member_leave(member)
+        profile_deleted = await self.profile_manager.on_member_leave(member)
+
+        await self.log.on_member_leave(
+            member=member,
+            venue_deleted=venue_deleted,
+            profile_deleted=profile_deleted,
+            jobs_deleted=0,
+            jobs_canceled=0
+        )
+
+################################################################################
+    async def on_member_join(self, member: Member) -> None:
+
+        await self.log.on_member_join(member)
+        self.member_welcome.start(member)
+
+################################################################################
+    @tasks.loop(count=1)
+    async def member_welcome(self, member: Member) -> None:
+
+        welcome_channel = await self.channel_manager.welcome_channel
+        if not welcome_channel:
+            return
+
+        welcome_message = (
+            "# __Welcome to the <a:party_bus:1225557207836393645> "
+            "Staff Party Bus!! <a:party_bus:1225557207836393645>__\n\n"
+
+            f"Hiya, {member.mention}! I'm the Staff Party Bot, and I'm going to be "
+            f"your best friend throughout your time here at the Staff Party Bus!\n\n"
+        )
+
+        flag = False
+        attempts = 0
+        target_dt = member.joined_at
+        while attempts < 5:
+            target_dt += timedelta(minutes=1)
+            # One minute for role selection
+            await discord.utils.sleep_until(target_dt)
+
+            # Get updated member object
+            if get_member := self.SPB_GUILD.get_member(member.id):
+                member = get_member
+
+            if await self.role_manager.venue_management_role in member.roles:
+                welcome_message += (
+                    "It looks like you've selected the Venue Management role!\n"
+                    "You can follow the instructions <#1220087653815291954> to set up "
+                    "your venue profile \\o/ <a:bartender:1168135253387378748> \n\n"
+                )
+                flag = True
+            if await self.role_manager.staff_pending_role in member.roles:
+                welcome_message += (
+                    "I see you've picked the Staff Pending role!\n"
+                    "You can follow the instructions here <#1104515062636478643> to do "
+                    "your staff validation and you'll be able to create your staff "
+                    "profile afterwards! <a:dancer:1168134583158575175>\n\n"
+                )
+                flag = True
+
+            if flag:
+                break
+            else:
+                attempts += 1
+
+        if not flag:
+            welcome_message += (
+                "It looks like you haven't selected any roles yet! You can do so "
+                "in <#1104515062636478638> to get started! <a:host:1168134582000943124>"
+            )
+
+        await welcome_channel.send(welcome_message)
 
 ################################################################################

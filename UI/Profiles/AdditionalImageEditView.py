@@ -70,8 +70,7 @@ class RemoveImageButton(FroggeButton):
         await image.remove(interaction)
         
         if len(self.view.ctx.additional) == 0:
-            self.view.complete = True
-            await self.view.message.delete()
+            await self.view.cancel()
             return
 
         await self.view.update(

@@ -23,7 +23,6 @@ class Venues(Cog):
     venues = SlashCommandGroup(
         name="venue",
         description="Commands for venue- and internship-related tasks and queries.",
-        contexts=[InteractionContextType.guild]
     )
 
 ################################################################################
@@ -75,18 +74,9 @@ class Venues(Cog):
         description="View and edit your venue's internship profile & status.",
         contexts=[InteractionContextType.guild]
     )
-    async def venue_profile(
-        self,
-        ctx: ApplicationContext,
-        name: Option(
-            SlashCommandOptionType.string,
-            name="name",
-            description="The name of the venue.",
-            required=True
-        )
-    ) -> None:
+    async def venue_profile(self, ctx: ApplicationContext) -> None:
 
-        await self.bot.venue_manager.venue_menu(ctx.interaction, name)
+        await self.bot.venue_manager.venue_menu(ctx.interaction)
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:

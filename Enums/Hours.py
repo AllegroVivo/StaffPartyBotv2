@@ -49,6 +49,6 @@ class Hours(FroggeEnum):
     @classmethod
     def limited_select_options(cls) -> List[SelectOption]:
 
-        return [o.select_option() for o in cls if o != cls.Unavailable]
+        return [o.select_option for o in cls if o != cls.Unavailable]
 
 ################################################################################

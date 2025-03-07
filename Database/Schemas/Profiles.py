@@ -67,6 +67,9 @@ class StaffProfileSchema(BaseModel):
     thumbnail_url: Optional[str]
     main_image_url: Optional[str]
     additional_images: List[AdditionalImageSchema] = []
+    # Other
+    muted_venue_ids: List[int]
+    hiatus: bool
 
     class Config:
         from_attributes = True

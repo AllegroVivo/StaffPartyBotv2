@@ -31,9 +31,21 @@ class VenueLocation:
 
         self._parent: Venue = parent
 
-        self.data_center: Optional[DataCenter] = kwargs.get("data_center", None)
-        self.world: Optional[GameWorld] = kwargs.get("world", None)
-        self.zone: Optional[HousingZone] = kwargs.get("zone", None)
+        self.data_center: Optional[DataCenter] = (
+            DataCenter(kwargs.get("data_center"))
+            if kwargs.get("data_center")
+            else None
+        )
+        self.world: Optional[GameWorld] = (
+            GameWorld(kwargs.get("world"))
+            if kwargs.get("world")
+            else None
+        )
+        self.zone: Optional[HousingZone] = (
+            HousingZone(kwargs.get("zone"))
+            if kwargs.get("zone")
+            else None
+        )
         self.ward: Optional[int] = kwargs.get("ward", None)
         self.plot: Optional[int] = kwargs.get("plot", None)
         self.subdivision: Optional[bool] = kwargs.get("subdivision", False)

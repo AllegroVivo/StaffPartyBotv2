@@ -32,5 +32,6 @@ class PositionModel(Base):
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="positions")
     requirements = relationship("RequirementModel", back_populates="position", passive_deletes=True)
+    temporary_jobs = relationship("TemporaryJobPostingModel", back_populates="position", passive_deletes=True)
 
 ################################################################################

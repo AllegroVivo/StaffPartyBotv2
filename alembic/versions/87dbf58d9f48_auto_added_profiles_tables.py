@@ -1,8 +1,8 @@
 """AUTO: Added profiles tables
 
-Revision ID: c415532ba9c5
+Revision ID: 87dbf58d9f48
 Revises: 46512a99ba96
-Create Date: 2025-02-27 11:13:00.772074
+Create Date: 2025-03-05 14:56:20.025913
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c415532ba9c5'
+revision: str = '87dbf58d9f48'
 down_revision: Union[str, None] = '46512a99ba96'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -52,7 +52,7 @@ def upgrade() -> None:
     )
     op.create_table('profile_additional_images',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('profile_id', sa.Integer(), nullable=False),
+    sa.Column('profile_id', sa.BigInteger(), nullable=False),
     sa.Column('url', sa.String(), nullable=False),
     sa.Column('caption', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['profile_id'], ['staff_profiles.user_id'], name='profile_additional_images_profile_fkey', ondelete='CASCADE'),
@@ -60,7 +60,7 @@ def upgrade() -> None:
     )
     op.create_table('profile_availabilities',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('profile_id', sa.Integer(), nullable=False),
+    sa.Column('profile_id', sa.BigInteger(), nullable=False),
     sa.Column('day', sa.Integer(), nullable=False),
     sa.Column('start_hour', sa.Integer(), nullable=False),
     sa.Column('start_minute', sa.Integer(), nullable=False),

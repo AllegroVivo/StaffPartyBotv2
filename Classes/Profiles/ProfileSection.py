@@ -45,6 +45,12 @@ class ProfileSection(ABC):
         return self._parent.id
     
 ################################################################################
+    @property
+    def user_id(self) -> int:
+
+        return self._parent.user_id
+
+################################################################################
     @staticmethod
     def progress_emoji(attribute: Optional[Any]) -> str:
 
@@ -93,5 +99,10 @@ class ProfileSection(ABC):
 
         await interaction.respond(embed=embed, view=view)
         await view.wait()
+
+################################################################################
+    async def update_post_components(self, update_embeds: bool = True, update_view: bool = True) -> bool:
+
+        return await self._parent.update_post_components(update_embeds, update_view)
 
 ################################################################################

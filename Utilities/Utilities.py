@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import math
 import re
-import zoneinfo
+import textwrap
 from datetime import datetime, time
-from zoneinfo import ZoneInfo
 from enum import Enum
 from typing import Any, List, Optional, Tuple, Union, Literal, TYPE_CHECKING, Dict
+from zoneinfo import ZoneInfo
 
 import emoji
 from discord import (
@@ -14,20 +14,19 @@ from discord import (
     Embed,
     EmbedField,
     EmbedFooter,
-    Interaction,
     NotFound,
     ChannelType,
     User,
     Role,
-    Emoji, Message, TextChannel, ForumChannel, Interaction, SelectOption
+    Emoji, Message, TextChannel, ForumChannel, Interaction, SelectOption, Forbidden
 )
 from discord.abc import GuildChannel
 
 from Assets import BotEmojis
 from Enums.Timezone import Timezone
+from UI.Common.FroggeMultiMenuSelect import FroggeMultiMenuSelect
 from .Colors import CustomColor
 from .ErrorMessage import ErrorMessage
-from UI.Common.FroggeMultiMenuSelect import FroggeMultiMenuSelect
 
 if TYPE_CHECKING:
     from Classes import GuildData, StaffPartyBot
@@ -609,7 +608,7 @@ class Utilities:
                 color=CustomColor.brand_red()
             )
             await interaction.respond(embed=embed)
-            return
+            return None
 
         image_url = None
         if message.content.lower() != "cancel":
@@ -629,8 +628,8 @@ class Utilities:
 
         try:
             await message.delete()
-        except NotFound:
-            pass
+        except (Forbidden, NotFound):
+            await interaction.respond("*Image could not be cleaned up, sorry!*")
 
         try:
             await msg.delete_original_response()
@@ -787,5 +786,11 @@ class Utilities:
             if value
             else BotEmojis.Cross
         )
+
+################################################################################
+    @staticmethod
+    def wrap_text(text: str, line_length: int) -> str:
+
+        return "\n".join(textwrap.wrap(text, width=line_length))
 
 ################################################################################

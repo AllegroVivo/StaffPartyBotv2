@@ -74,13 +74,13 @@ class PersonalityButton(FroggeButton):
         
         super().__init__(
             style=ButtonStyle.primary,
-            label="Personality/Preferences",
+            label="Personality Elements",
             disabled=False,
             row=0
         )
         
     async def callback(self, interaction: Interaction):
-        await self.view.ctx.personality_preferences_menu(interaction)
+        await self.view.ctx.personality_menu(interaction)
         
 ################################################################################
 class ImagesButton(FroggeButton):

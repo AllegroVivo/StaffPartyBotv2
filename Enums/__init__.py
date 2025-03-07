@@ -1,5 +1,6 @@
 from ._Enum import FroggeEnum
 from .XIVRegion import XIVRegion
+from .Month import Month
 from .Gender import Gender
 from .Pronoun import Pronoun
 from .Hours import Hours

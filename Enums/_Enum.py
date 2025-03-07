@@ -26,9 +26,10 @@ class FroggeEnum(Enum):
     @classmethod
     def select_options(cls) -> List[SelectOption]:
 
-        return [x.select_option() for x in cls]
+        return [x.select_option for x in cls]
 
 ################################################################################
+    @property
     def select_option(self) -> SelectOption:
 
         return SelectOption(label=self.proper_name, value=str(self.value))

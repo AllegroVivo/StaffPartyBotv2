@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, List, Optional, Type, Dict, Any
 
-from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel, ForumTag, NotFound, Colour, Thread
+from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel, ForumTag, NotFound, Colour, Thread, SelectOption
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
 from Enums import RPLevel
-from UI.Common import FroggeView, FroggeSelectView
+from UI.Common import FroggeView, FroggeSelectView, ConfirmCancelView, BasicTextModal
 from UI.Venues import VenuePostingMuteView, VenueStatusView
 from .VenueLocation import VenueLocation
 from .VenueHours import VenueHours
@@ -286,9 +286,18 @@ class Venue(ManagedObject):
         }
 
 ################################################################################
-    def delete(self) -> None:
+    async def delete(self) -> None:
 
         self.bot.db.delete.venue(self.id)
+
+        try:
+            post_message = await self.post_message
+            if post_message is not None:
+                if isinstance(post_message.channel, Thread):
+                    await post_message.channel.delete()
+        except:
+            pass
+
         self._mgr._managed.remove(self)
 
 ################################################################################
@@ -533,20 +542,20 @@ class Venue(ManagedObject):
         )
 
 ################################################################################
-    async def update_post_components(self, status: bool, view: bool = True) -> None:
+    async def update_post_components(self, status: bool, update_view: bool = True) -> None:
 
         post_message = await self.post_message
         if post_message is None:
             return
 
-        if status and not view:
+        if status and not update_view:
             await post_message.edit(embed=await self.status(post=True))
             return
 
         view = VenuePostingMuteView(self)
         self.bot.add_view(view)
 
-        if view and not status:
+        if update_view and not status:
             await post_message.edit(view=view)
         else:
             await post_message.edit(embed=await self.status(post=True), view=view)
@@ -620,11 +629,6 @@ class Venue(ManagedObject):
 
         await super().remove(interaction)
 
-        post_message = await self.post_message
-        if post_message is not None:
-            if isinstance(post_message.channel, Thread):
-                await post_message.channel.delete()
-
         confirm = U.make_embed(
             title="Venue Removed",
             description=f"Venue `{self.name}` has been removed from the bot."
@@ -653,5 +657,162 @@ class Venue(ManagedObject):
         )
 
         await interaction.respond(embed=confirm, ephemeral=True)
+
+################################################################################
+    async def continue_import(self, interaction: Interaction) -> None:
+
+        prompt = U.make_embed(
+            title="Next Steps",
+            description=(
+                "Your venue has been imported from the FFXIV Venues API!\n\n"
+                
+                "Next, you'll need to configure some SPB-specific things.\n"
+                "Let's start by setting the RP level for your venue.\n\n"
+            )
+        )
+        view = FroggeSelectView(interaction.user, RPLevel.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.rp_level = RPLevel(int(view.value))
+        await self.update_post_components(True)
+
+        prompt = U.make_embed(
+            title="Hiring Information",
+            description=(
+                "Great! You've set the RP level for your venue!\n\n"
+                
+                "Next, let's confirm your venue's hiring status.\n\n"
+                
+                "**Will you be interested in hiring staff at this time?**\n"
+            )
+        )
+        view = ConfirmCancelView(
+            owner=interaction.user,
+            confirm_text="Yes, we are hiring.",
+            cancel_text="No, we are not hiring."
+        )
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.hiring = view.value
+
+        if self.hiring:
+            prompt = U.make_embed(
+                title="Application URL",
+                description=(
+                    "Wonderful! You've set the RP level and hiring status for your venue!\n\n"
+                    
+                    "Next, let's set the application URL for your venue.\n\n"
+                    
+                    "Does your venue have a specific URL for staffing applications?\n"
+                )
+            )
+            view = ConfirmCancelView(
+                owner=interaction.user,
+                confirm_text="Yes, enter Application URL",
+                cancel_text="No, skip this step",
+                return_interaction=True
+            )
+
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if view.value is None:
+                return
+
+            if view.value is not False:
+                _, inter = view.value
+
+                modal = BasicTextModal(
+                    title="Application URL",
+                    attribute="URL",
+                    cur_val=self._urls.application,
+                    max_length=250
+                )
+
+                await inter.response.send_modal(modal)
+                await modal.wait()
+
+                if not modal.complete:
+                    return
+
+                self._urls.application = modal.value
+
+        prompt = U.make_embed(
+            title="Next Steps",
+            description=(
+                "Great! You've set the RP level for your venue!\n\n"
+                
+                "Next, let's set the permanent positions that your venue employs.\n\n"
+                
+                "You may pick multiple positions from the selector below.\n"
+            )
+        )
+        view = FroggeSelectView(
+            owner=interaction.user,
+            options=[p.select_option() for p in self.bot.position_manager.positions],
+            multi_select=True
+        )
+
+        await interaction.followup.send(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        self.positions = [self.bot.position_manager[v] for v in view.value]
+        await self.update_post_components(True)
+
+        prompt = U.make_embed(
+            title="Next Steps",
+            description=(
+                "Fantastic! You've set the positions that your venue employs!\n\n"
+                
+                "Next, let's set the logo for your venue.\n\n"
+                
+                "Please upload the image you'd like to use to this channel now.\n"
+                "*(Yeah, just upload it normally into discord like you're going to share it.)*"
+            )
+        )
+        image_url = await U.wait_for_image(interaction, prompt)
+        if image_url is None:
+            return
+
+        self._urls.logo = image_url
+        self.update()
+        await self.update_post_components(True)
+
+        confirm = U.make_embed(
+            title="Venue Import Complete",
+            description=(
+                "Your venue has been successfully imported and configured!\n\n"
+                
+                "You're all set! You can now view your venue's profile by clicking the link below.\n"
+                f"[Click to View]({self.post_url})"
+            )
+        )
+        await interaction.respond(embed=confirm, ephemeral=True)
+
+################################################################################
+    def select_option(self) -> SelectOption:
+
+        return SelectOption(
+            label=self.name,
+            value=str(self.id)
+        )
+
+################################################################################
+    async def temp_job_wizard(self, interaction: Interaction) -> None:
+
+        await self.bot.jobs_manager.temp_job_wizard(interaction, self)
 
 ################################################################################

@@ -25,8 +25,8 @@ class ChannelManagerMenuView(FroggeView):
             UpdateChannelButton(ChannelPurpose.LogStream, 0),
             UpdateChannelButton(ChannelPurpose.Profiles, 0),
             UpdateChannelButton(ChannelPurpose.Venues, 0),
-            UpdateChannelButton(ChannelPurpose.GroupTraining, 1),
             UpdateChannelButton(ChannelPurpose.TempJobs, 1),
+            UpdateChannelButton(ChannelPurpose.PermJobs, 1),
             UpdateChannelButton(ChannelPurpose.BotNotify, 1),
             CloseMessageButton()
         ]

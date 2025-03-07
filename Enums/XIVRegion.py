@@ -1,4 +1,8 @@
+from typing import TYPE_CHECKING
 from ._Enum import FroggeEnum
+
+if TYPE_CHECKING:
+    from Enums import DataCenter
 ################################################################################
 class XIVRegion(FroggeEnum):
 
@@ -32,4 +36,18 @@ class XIVRegion(FroggeEnum):
         return self.name
     
 ################################################################################
-    
+    def contains(self, dc: DataCenter) -> bool:
+
+        if dc is None:
+            return False
+
+        if self.value == 1:
+            return dc.value in [1, 2, 3, 4]
+        elif self.value == 2:
+            return dc.value in [5, 6]
+        elif self.value == 3:
+            return dc.value in [7]
+        else:
+            return dc.value in [8, 9, 10, 11]
+
+################################################################################

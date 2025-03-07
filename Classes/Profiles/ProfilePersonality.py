@@ -8,10 +8,11 @@ from Assets import BotEmojis
 from UI.Profiles import ProfilePersonalityStatusView
 from .ProfileSection import ProfileSection
 from Utilities import Utilities as U
+from UI.Common import BasicTextModal, InstructionsInfo
 
 if TYPE_CHECKING:
     from Classes import Profile
-    from UI.Common import FroggeView, BasicTextModal, InstructionsInfo
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("ProfilePersonality", )
@@ -214,6 +215,7 @@ class ProfilePersonality(ProfileSection):
             return
 
         self.likes = [l.strip() for l in modal.value.split(",")] if modal.value else []
+        await self.update_post_components()
 
 ################################################################################
     async def set_dislikes(self, interaction: Interaction) -> None:
@@ -243,6 +245,7 @@ class ProfilePersonality(ProfileSection):
             return
 
         self.dislikes = [l.strip() for l in modal.value.split(",")] if modal.value else []
+        await self.update_post_components()
 
 ################################################################################
     async def set_personality(self, interaction: Interaction) -> None:
@@ -272,6 +275,7 @@ class ProfilePersonality(ProfileSection):
             return
 
         self.personality = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_aboutme(self, interaction: Interaction) -> None:
@@ -301,5 +305,6 @@ class ProfilePersonality(ProfileSection):
             return
 
         self.about_me = modal.value
+        await self.update_post_components()
 
 ################################################################################

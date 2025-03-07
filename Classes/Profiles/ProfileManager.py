@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from discord import Interaction, User, Embed, ForumChannel
+from discord import Interaction, User, Embed, ForumChannel, Member, Thread
 
 from Classes.Common import ObjectManager
 from .Profile import Profile
@@ -33,6 +33,12 @@ class ProfileManager(ObjectManager):
         return await self.bot.channel_manager.profiles_channel
 
 ################################################################################
+    @property
+    def profiles(self) -> List[Profile]:
+
+        return self._managed
+
+################################################################################
     async def status(self) -> Embed:
 
         pass
@@ -56,5 +62,40 @@ class ProfileManager(ObjectManager):
     async def remove_item(self, interaction: Interaction) -> None:
 
         pass
+
+################################################################################
+    def get_profile(self, user_id: int) -> Profile:
+
+        for p in self._managed:
+            if p.user_id == user_id:
+                return p
+
+        profile = Profile.new(self, user_id)
+        self._managed.append(profile)
+
+        return profile
+
+################################################################################
+    async def user_menu(self, interaction: Interaction) -> None:
+
+        profile = self.get_profile(interaction.user.id)
+        await profile.menu(interaction)
+
+################################################################################
+    async def on_member_leave(self, member: Member) -> bool:
+
+        for profile in self._managed:
+            if profile.user_id == member.id:
+                post_message = await profile.post_message
+                try:
+                    if isinstance(post_message.channel, Thread):
+                        await post_message.channel.delete()
+                    else:
+                        await post_message.delete()
+                    return True
+                except:
+                    pass
+
+        return False
 
 ################################################################################

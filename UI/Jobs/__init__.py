@@ -1,0 +1,2 @@
+from .JobPostingPickupView import JobPostingPickupView
+################################################################################

@@ -38,13 +38,9 @@ class VenueMuteButton(Button):
         )
         
     async def callback(self, interaction: Interaction):
-        await interaction.respond("This feature is not yet implemented.")
-        # venue: Venue = self.view.venue
-        # tuser = venue.guild.training_manager[interaction.user.id]
-        # if tuser is None:
-        #     await interaction.edit()
-        #     return
-        #
-        # await tuser.mute_venue(interaction, venue)
+        venue: Venue = self.view.venue
+        profile = interaction.client.profile_manager.get_profile(interaction.user.id)  # type: ignore
+
+        await profile.mute_venue(interaction, venue)
     
 ################################################################################

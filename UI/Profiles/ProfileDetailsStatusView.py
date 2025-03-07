@@ -190,7 +190,7 @@ class ToggleDMPrefButton(FroggeButton):
             self.emoji = BotEmojis.ThumbsDown
         
     async def callback(self, interaction: Interaction) -> None:
-        self.view.ctx.toggle_dm_preference()
+        await self.view.ctx.toggle_dm_preference(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################

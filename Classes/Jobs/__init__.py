@@ -1,3 +1,3 @@
-from .JobPosting import JobPosting
+from .TemporaryJobPosting import TemporaryJobPosting
 from .JobPostingManager import JobPostingManager
 ################################################################################

@@ -82,3 +82,8 @@ class DatabaseUpdater:
         self._update_record(Models.StaffProfileModel, p.to_dict(), user_id=p.user_id)
 
 ################################################################################
+    def additional_image(self, ai: AdditionalImage) -> None:
+
+        self._update_record(Models.ProfileAdditionalImageModel, ai.to_dict(), id=ai.id)
+
+################################################################################

@@ -9,6 +9,7 @@ class ChannelPurpose(FroggeEnum):
     Welcome = 5
     BotNotify = 6
     GroupTraining = 7
+    PermJobs = 8
 
 ################################################################################
     @property
@@ -26,6 +27,8 @@ class ChannelPurpose(FroggeEnum):
             return "Bot Restart Notification Channels"
         elif self.value == 7:
             return "Group Training Channel"
+        elif self.value == 8:
+            return "Permanent Jobs Channel"
         
         return self.name + " Channel"
     

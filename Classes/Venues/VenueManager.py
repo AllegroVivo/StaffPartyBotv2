@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Dict, Optional
 
-from discord import Interaction, User, Embed, ForumChannel
+from discord import Interaction, User, Embed, ForumChannel, Member
 
 from Classes.Common import ObjectManager
-from UI.Common import FroggeView, ConfirmCancelView
+from UI.Common import FroggeView, ConfirmCancelView, FroggeSelectView
 from Utilities import Utilities as U
 from .Venue import Venue
 
@@ -69,6 +69,14 @@ class VenueManager(ObjectManager):
     async def remove_item(self, interaction: Interaction) -> None:
 
         pass
+
+################################################################################
+    def get_venues_by_user(self, user_id: int) -> List[Venue]:
+
+        return [
+            v for v in self._managed
+            if user_id in [m.id for m in v._users]
+        ]
 
 ################################################################################
     def get_venue(self, name: str) -> Optional[Venue]:
@@ -176,9 +184,12 @@ class VenueManager(ObjectManager):
         self._managed.append(venue)
 
         await self.bot.log.venue_created(venue)
-
         await venue.post(interaction, await self.post_channel, True)
-        await venue.menu(interaction)
+
+        if admin_user:
+            await venue.menu(interaction)
+        else:
+            await venue.continue_import(interaction)
 
 ################################################################################
     async def remove_venue(self, interaction: Interaction, venue_name: str) -> None:
@@ -229,21 +240,62 @@ class VenueManager(ObjectManager):
         await venue.toggle_user_mute(interaction, user)
 
 ################################################################################
-    async def venue_menu(self, interaction: Interaction, name: str) -> None:
+    async def venue_menu(self, interaction: Interaction) -> None:
 
-        venue = self.get_venue(name)
-        if venue is None:
+        venues = self.get_venues_by_user(interaction.user.id)
+        if not venues:
             error = U.make_error(
                 title="Venue Doesn't Exist",
-                message=f"The venue `{name}` hasn't been created yet.",
+                message=f"A venue under your management hasn't been created yet.",
                 solution=f"Use the `/venue import` command to create the venue."
             )
             await interaction.respond(embed=error, ephemeral=True)
             return
 
+        assert len(venues) > 0
+
+        if len(venues) == 1:
+            venue = venues[0]
+        else:
+            prompt = U.make_embed(
+                title="Select Venue",
+                description=(
+                    "You are a manager for multiple venues. Please select the venue "
+                    "you would like to manage."
+                )
+            )
+            view = FroggeSelectView(interaction.user, [v.select_option() for v in venues])
+
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if not view.complete or view.value is False:
+                return
+
+            venue = self[view.value]
+
         if not await self.authenticate(venue, interaction.user, interaction):
             return
 
         await venue.menu(interaction)
+
+################################################################################
+    async def on_member_leave(self, member: Member) -> bool:
+        """Returns True if a venue was deleted as a result of the member leaving."""
+
+        for venue in self.venues:
+            managers = await venue.managers
+            if member in managers:
+                flag = False
+                for user in managers:
+                    if self.bot.SPB_GUILD.get_member(user.id) is not None:
+                        flag = True
+                        break
+
+                if flag is False:
+                    await venue.delete()
+                    return True
+
+        return False
 
 ################################################################################

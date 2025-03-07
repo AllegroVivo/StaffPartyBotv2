@@ -10,10 +10,11 @@ from UI.Profiles import SetRemoveImageView, ProfileImagesStatusView
 from .ProfileSection import ProfileSection
 from .AdditionalImage import AdditionalImage
 from Utilities import Utilities as U
+from UI.Common import ConfirmCancelView, Frogginator
 
 if TYPE_CHECKING:
     from Classes import Profile
-    from UI.Common import FroggeView, ConfirmCancelView, Frogginator
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("ProfileImages", )
@@ -37,7 +38,7 @@ class ProfileImages(ProfileSection):
         self._thumbnail: Optional[str] = kwargs.get("thumbnail_url")
         self._main_image: Optional[str] = kwargs.get("main_image_url")
         self._additional: List[AdditionalImage] = [
-            AdditionalImage(self, **a) for a in kwargs.get("additional", [])
+            AdditionalImage(self, **a) for a in kwargs.get("additional_images", [])
         ]
 
 ################################################################################
@@ -221,6 +222,8 @@ class ProfileImages(ProfileSection):
         else:
             self.main_image = None
 
+        await self.update_post_components()
+
 ################################################################################
     async def set_image(self, interaction: Interaction, image_type: Literal["Thumbnail", "Main"]) -> None:
 
@@ -240,6 +243,8 @@ class ProfileImages(ProfileSection):
             else:
                 self.main_image = image
 
+        await self.update_post_components()
+
 ################################################################################
     async def add_additional_image(self, interaction: Interaction) -> None:
 
@@ -256,8 +261,10 @@ class ProfileImages(ProfileSection):
             )
         )
 
-        if image := await U.wait_for_image(interaction, prompt):
+        if image := await U.wait_for_image(interaction, prompt, U.DumpMethod.Cloudinary):
             self._additional.append(AdditionalImage.new(self, image, None))
+
+        await self.update_post_components()
 
 ################################################################################
     async def paginate_additional(self, interaction: Interaction) -> None:

@@ -1,7 +1,8 @@
 from __future__ import annotations
-import random
+
+from zoneinfo import ZoneInfo
 import calendar
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from typing import TYPE_CHECKING, Type, TypeVar, Any, Dict, Optional
 
 from Classes.Common import Identifiable
@@ -41,6 +42,7 @@ class VenueHours(Identifiable):
 
         day = kwargs.get("day")
         interval_type = kwargs.get("interval_type")
+
         self._day: Weekday = Weekday(day) if day is not None else None
         self._open_hour: int = kwargs.get("start_hour")
         self._open_minute: int = kwargs.get("start_minute")
@@ -69,22 +71,41 @@ class VenueHours(Identifiable):
         return self._parent.bot
 
 ################################################################################
-    def open_ts(self) -> str:
+    @property
+    def start_time(self) -> time:
 
-        res = self.resolve()
-        return U.format_dt(res, "t")
+        return time(self._open_hour, self._open_minute)
 
 ################################################################################
-    def close_ts(self) -> str:
+    @property
+    def end_time(self) -> time:
+
+        return time(self._close_hour, self._close_minute)
+
+################################################################################
+    def open_timestamp(self) -> str:
+
+        return U.format_dt(self.resolve(), "t")
+
+################################################################################
+    def close_timestamp(self) -> str:
 
         if self._close_hour is None or self._close_minute is None:
             return "N/A"
 
-        dt = self.resolve()
-        if self._open_hour > self._close_hour:
-            dt += timedelta(days=1)
+        next_date = self.resolve().date()
+        if self._close_hour < self._open_hour:
+            next_date += timedelta(days=1)
 
-        return U.format_dt(dt, "t")
+        dt = datetime(
+            year=next_date.year,
+            month=next_date.month,
+            day=next_date.day,
+            hour=self.end_time.hour,
+            minute=self.end_time.minute,
+            tzinfo=ZoneInfo("UTC")
+        )
+        return U.format_dt(dt.replace(tzinfo=ZoneInfo("UTC")), "t")
 
 ################################################################################
     def update(self) -> None:
@@ -126,7 +147,7 @@ class VenueHours(Identifiable):
     def resolve(self) -> datetime:
         """Determines the next scheduled opening date and time."""
 
-        today = datetime.today()
+        today = datetime.now(ZoneInfo("UTC"))
         next_open_date = None
 
         # If interval type is Every X Weeks
@@ -138,7 +159,7 @@ class VenueHours(Identifiable):
             next_open_date = self._calculate_next_monthly_schedule(today)
 
         if next_open_date:
-            return next_open_date.replace(hour=self._open_hour, minute=self._open_minute)
+            return next_open_date.replace(hour=self._open_hour, minute=self._open_minute, tzinfo=ZoneInfo("UTC"))
 
         return datetime.min
 
@@ -189,8 +210,8 @@ class VenueHours(Identifiable):
         day_name = self._day.proper_name if self._day else "Unknown Day"
 
         # Convert the open/close times to strings
-        open_str = self.open_ts()
-        close_str = self.close_ts()
+        open_str = self.open_timestamp()
+        close_str = self.close_timestamp()
 
         if not self._interval_type:
             # Fallback if interval type is not set

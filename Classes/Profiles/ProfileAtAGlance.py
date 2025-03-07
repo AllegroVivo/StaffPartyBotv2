@@ -62,7 +62,7 @@ class ProfileAtAGlance(ProfileSection):
             self._clan = kwargs.get("clan")
 
         try:
-            self._orientation: Optional[Union[Orientation, str]] = kwargs.get("orientation")
+            self._orientation: Optional[Union[Orientation, str]] = Orientation(int(kwargs.get("orientation")))
         except (TypeError, ValueError):
             self._orientation = kwargs.get("orientation")
 
@@ -194,7 +194,7 @@ class ProfileAtAGlance(ProfileSection):
             "height": self._height,
             "age": self._age,
             "mare": self._mare,
-            "data_center": [dc.value for dc in self._data_centers],
+            "data_centers": [dc.value for dc in self._data_centers],
         }
 
 ################################################################################
@@ -384,6 +384,8 @@ class ProfileAtAGlance(ProfileSection):
         self.gender = view.value[0]
         self.pronouns = view.value[1]
 
+        await self.update_post_components()
+
 ################################################################################
     async def set_raceclan(self, interaction: Interaction) -> None:
 
@@ -408,6 +410,8 @@ class ProfileAtAGlance(ProfileSection):
         self.race = view.value[0]
         self.clan = view.value[1]
 
+        await self.update_post_components()
+
 ################################################################################
     async def set_orientation(self, interaction: Interaction) -> None:
 
@@ -429,6 +433,7 @@ class ProfileAtAGlance(ProfileSection):
             return
 
         self.orientation = view.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_height(self, interaction: Interaction) -> None:
@@ -499,6 +504,8 @@ class ProfileAtAGlance(ProfileSection):
             inches = int(result.group(4)) * 12 + int(result.group(5))
             self.height = math.ceil(inches * 2.54)
 
+        await self.update_post_components()
+
 ################################################################################
     async def set_age(self, interaction: Interaction) -> None:
 
@@ -518,6 +525,7 @@ class ProfileAtAGlance(ProfileSection):
             return
 
         self.age = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_mare(self, interaction: Interaction) -> None:
@@ -538,6 +546,7 @@ class ProfileAtAGlance(ProfileSection):
             return
 
         self.mare = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_data_centers(self, interaction: Interaction) -> None:
@@ -557,5 +566,6 @@ class ProfileAtAGlance(ProfileSection):
             return
 
         self.data_centers = [XIVRegion(int(dc)) for dc in view.value]
+        await self.update_post_components()
 
 ################################################################################

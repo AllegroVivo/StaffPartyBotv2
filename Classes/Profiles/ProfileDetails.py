@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, List, Any, Dict, Union, Tuple
 from zoneinfo import ZoneInfo
 
@@ -30,7 +30,7 @@ class ProfileDetails(ProfileSection):
         "_color",
         "_jobs",
         "_rates",
-        "_positions",
+        "_position_ids",
         "_availability",
         "_dm_pref",
         "_tz",
@@ -43,23 +43,25 @@ class ProfileDetails(ProfileSection):
 
         self._name: Optional[str] = kwargs.get("name")
         self._url: Optional[str] = kwargs.get("url")
-        self._color: FroggeColor = kwargs.get("color")
+        self._color: Optional[FroggeColor] = (
+            FroggeColor(kwargs.get("color"))
+            if kwargs.get("color")
+            else None
+        )
         self._jobs: List[str] = kwargs.get("jobs", [])
         self._rates: Optional[str] = kwargs.get("rates")
-        self._positions: List[Position] = kwargs.get("positions", [])
-        self._availability: List[Availability] = kwargs.get("availability", [])
+        self._position_ids: List[int] = kwargs.get("position_ids", [])
+        self._availability: List[Availability] = [
+            Availability(self.parent, **a)
+            for a in
+            kwargs.get("availability", [])
+        ]
         self._dm_pref: bool = kwargs.get("dm_pref", False)
         self._tz: Optional[ZoneInfo] = (
             ZoneInfo(kwargs.get("timezone"))
             if kwargs.get("timezone")
             else None
         )
-
-################################################################################
-    def finalize_load(self) -> None:
-
-        positions = [self.bot.position_manager[pos_id] for pos_id in self._positions]  # type: ignore
-        self._positions = positions
 
 ################################################################################
     @property
@@ -125,12 +127,12 @@ class ProfileDetails(ProfileSection):
     @property
     def positions(self) -> List[Position]:
 
-        return self._positions
+        return [self.bot.position_manager[pos_id] for pos_id in self._position_ids]
 
     @positions.setter
-    def positions(self, value: List[Position]) -> None:
+    def positions(self, value: List[int]) -> None:
 
-        self._positions = value
+        self._position_ids = value
         self.update()
 
 ################################################################################
@@ -176,7 +178,7 @@ class ProfileDetails(ProfileSection):
             "color": self._color.value if self._color else None,
             "jobs": self._jobs,
             "rates": self._rates,
-            "positions": [p.id for p in self._positions],
+            "position_ids": self._position_ids,
             "dm_pref": self._dm_pref,
             "timezone": self._tz.key if self._tz else None,
         }
@@ -305,6 +307,7 @@ class ProfileDetails(ProfileSection):
             return
 
         self.name = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_url(self, interaction: Interaction) -> None:
@@ -314,7 +317,8 @@ class ProfileDetails(ProfileSection):
             attribute="Custom URL",
             cur_val=self._url,
             example="eg. 'https://carrd.co/AllegroVivo'",
-            max_length=200
+            max_length=200,
+            required=False
         )
 
         await interaction.response.send_modal(modal)
@@ -333,6 +337,7 @@ class ProfileDetails(ProfileSection):
             return
 
         self.url = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_color(self, interaction: Interaction) -> None:
@@ -359,6 +364,7 @@ class ProfileDetails(ProfileSection):
             return
 
         self.jobs = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_rates(self, interaction: Interaction) -> None:
@@ -380,6 +386,7 @@ class ProfileDetails(ProfileSection):
             return
 
         self.rates = modal.value
+        await self.update_post_components()
 
 ################################################################################
     async def set_positions(self, interaction: Interaction) -> None:
@@ -405,7 +412,8 @@ class ProfileDetails(ProfileSection):
         if not view.complete or view.value is False:
             return
 
-        self.positions = [self.bot.position_manager[p] for p in view.value]
+        self.positions = [int(v) for v in view.value]
+        await self.update_post_components()
 
 ################################################################################
     async def set_timezone(self, interaction: Interaction) -> None:
@@ -422,13 +430,15 @@ class ProfileDetails(ProfileSection):
         if not view.complete or view.value is False:
             return
 
-        self.timezone = U.TIMEZONE_OFFSETS[Timezone(view.value)]
+        self.timezone = U.TIMEZONE_OFFSETS[Timezone(int(view.value))]
 
 ################################################################################
     async def toggle_dm_preference(self, interaction: Interaction) -> None:
 
         self.dm_preference = not self.dm_preference
+
         await interaction.edit()
+        await self.update_post_components()
 
 ################################################################################
     async def set_availability(self, interaction: Interaction) -> None:
@@ -501,26 +511,63 @@ class ProfileDetails(ProfileSection):
 
         end_hour, end_minute = view.value
 
-        # === CONVERT USER INPUT TO UTC === #
-        today = datetime.today().date()  # Get today's date (we only care about time)
+        # # === CONVERT USER INPUT TO UTC === #
+        # today = datetime.today().date()  # Get today's date (we only care about time)
+        #
+        # # Create a naive datetime object
+        # start_local = datetime(today.year, today.month, today.day, start_hour, start_minute)
+        # end_local = datetime(today.year, today.month, today.day, end_hour, end_minute)
+        #
+        # # Attach the user's timezone
+        # start_with_tz = start_local.replace(tzinfo=self._tz)
+        # end_with_tz = end_local.replace(tzinfo=self._tz)
+        #
+        # # Convert to UTC
+        # start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
+        # end_utc = end_with_tz.astimezone(ZoneInfo("UTC"))
+        #
+        # # Store the UTC times
+        # availability = Availability.new(
+        #     self.parent, weekday, start_utc.hour,
+        #     start_utc.minute, end_utc.hour, end_utc.minute
+        # )
+        # self._availability.append(availability)
 
-        # Create a naive datetime object
-        start_local = datetime(today.year, today.month, today.day, start_hour, start_minute)
-        end_local = datetime(today.year, today.month, today.day, end_hour, end_minute)
+        # 1) Figure out a date in local time for the chosen weekday
+        #    This is optional, but if you want to handle the user picking e.g. "Wednesday"
+        #    and it's currently "Sunday" in their local TZ, find the next Wednesday, etc.
+        now_local = datetime.now(self._tz)
+        today_local = now_local.date()
+        # Python's datetime.weekday(): Monday=0..Sunday=6
+        current_wkday = now_local.weekday()
+        day_diff = (weekday.value - current_wkday) % 7
+        chosen_date_local = today_local + timedelta(days=day_diff)
 
-        # Attach the user's timezone
-        start_with_tz = start_local.replace(tzinfo=self._tz)
-        end_with_tz = end_local.replace(tzinfo=self._tz)
+        # 2) Construct naive datetimes for the chosen date + user input hours/minutes
+        start_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
+                               start_hour, start_minute)
+        end_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
+                             end_hour, end_minute)
 
-        # Convert to UTC
+        # 3) Attach the user’s time zone (i.e., interpret these naive datetimes as local time)
+        start_with_tz = start_naive.replace(tzinfo=self._tz)
+        end_with_tz   = end_naive.replace(tzinfo=self._tz)
+
+        # 4) Convert to UTC
         start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
-        end_utc = end_with_tz.astimezone(ZoneInfo("UTC"))
+        end_utc   = end_with_tz.astimezone(ZoneInfo("UTC"))
 
-        # Store the UTC times
+        # 5) Store the UTC times
         availability = Availability.new(
-            self.parent, weekday, start_utc.hour,
-            start_utc.minute, end_utc.hour, end_utc.minute
+            self.parent,
+            weekday,
+            start_utc.hour,
+            start_utc.minute,
+            end_utc.hour,
+            end_utc.minute
         )
         self._availability.append(availability)
+
+        await self.update_post_components()
 
 ################################################################################

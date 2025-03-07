@@ -51,7 +51,7 @@ class SetGenderPronounButton(FroggeButton):
 
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_gender(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
 
 ################################################################################
 class SetRaceClanButton(FroggeButton):
@@ -70,7 +70,7 @@ class SetRaceClanButton(FroggeButton):
         
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_raceclan(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
 class SetOrientationButton(FroggeButton):
@@ -89,7 +89,7 @@ class SetOrientationButton(FroggeButton):
         
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_orientation(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
 class SetHeightButton(FroggeButton):
@@ -108,7 +108,7 @@ class SetHeightButton(FroggeButton):
         
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_height(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
 class SetAgeButton(FroggeButton):
@@ -127,7 +127,7 @@ class SetAgeButton(FroggeButton):
         
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_age(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
 class SetMareButton(FroggeButton):
@@ -146,7 +146,7 @@ class SetMareButton(FroggeButton):
 
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_mare(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
 
 ################################################################################
 class SetHomeRegionsButton(FroggeButton):
@@ -165,6 +165,6 @@ class SetHomeRegionsButton(FroggeButton):
 
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.set_data_centers(interaction)
-        await self.view.edit_message_helper(interaction, view=self.view.ctx.status())
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################

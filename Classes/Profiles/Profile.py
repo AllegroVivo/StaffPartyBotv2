@@ -25,10 +25,11 @@ from Utilities import Utilities as U, FroggeColor
 from .ProfilePersonality import ProfilePersonality
 from .ProfileImages import ProfileImages
 from Errors import InsufficientPermissions
+from UI.Common import CloseMessageView
 
 if TYPE_CHECKING:
-    from Classes import ProfileManager, Position
-    from UI.Common import FroggeView, CloseMessageView
+    from Classes import ProfileManager, Position, Venue
+    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("Profile", )
@@ -45,6 +46,8 @@ class Profile(ManagedObject):
         "_personality",
         "_images",
         "_post_msg",
+        "_muted_venue_ids",
+        "_hiatus",
     )
 
 ################################################################################
@@ -54,6 +57,8 @@ class Profile(ManagedObject):
 
         self._user: LazyUser = LazyUser(self, kwargs["user_id"])
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
+        self._muted_venue_ids: List[int] = kwargs.get("muted_venue_ids", [])
+        self._hiatus: bool = kwargs.get("hiatus", False)
 
         self._details: ProfileDetails = ProfileDetails(self, **kwargs)
         self._aag: ProfileAtAGlance = ProfileAtAGlance(self, **kwargs)
@@ -62,9 +67,9 @@ class Profile(ManagedObject):
 
 ################################################################################
     @classmethod
-    def new(cls: Type[P], mgr: ProfileManager, user: User) -> P:
+    def new(cls: Type[P], mgr: ProfileManager, user_id: int) -> P:
 
-        new_data = mgr.bot.db.insert.profile(user.id)
+        new_data = mgr.bot.db.insert.profile(user_id)
         return cls(mgr, **new_data)
 
 ################################################################################
@@ -116,6 +121,12 @@ class Profile(ManagedObject):
 
 ################################################################################
     @property
+    def muted_venues(self) -> List[Venue]:
+
+        return [self.bot.venue_manager[vid] for vid in self._muted_venue_ids]
+
+################################################################################
+    @property
     async def post_message(self) -> Optional[Message]:
 
         return await self._post_msg.get()
@@ -131,6 +142,18 @@ class Profile(ManagedObject):
         return self._post_msg.id
 
 ################################################################################
+    @property
+    def on_hiatus(self) -> bool:
+
+        return self._hiatus
+
+    @on_hiatus.setter
+    def on_hiatus(self, value: bool) -> None:
+
+        self._hiatus = value
+        self.update()
+
+################################################################################
     def update(self) -> None:
 
         self.bot.db.update.profile(self)
@@ -140,6 +163,8 @@ class Profile(ManagedObject):
 
         return {
             "post_url": self.post_url,
+            "hiatus": self._hiatus,
+            "muted_venue_ids": self._muted_venue_ids,
         }
 
 ################################################################################
@@ -153,7 +178,7 @@ class Profile(ManagedObject):
 
         return all([
             self._aag._data_centers,
-            self._details._positions,
+            self._details._position_ids,
             self._details._availability,
             self._details._name,
         ])
@@ -356,7 +381,7 @@ class Profile(ManagedObject):
 ################################################################################
     async def post(self, interaction: Interaction) -> None:
 
-        await interaction.response.defer(invisible=False)
+        await interaction.response.defer(invisible=False, ephemeral=True)
 
         post_channel = await self.bot.profile_manager.post_channel
         if post_channel is None:
@@ -401,10 +426,11 @@ class Profile(ManagedObject):
                     "must not exceed 6,000."
                 )
             )
-            await interaction.response.send_message(embed=error, ephemeral=True)
+            await interaction.respond(embed=error, ephemeral=True)
             return
 
-        member = self.bot.get_guild(self.bot.SPB_ID).get_member(self._user.id)
+        # member = self.bot.get_guild(self.bot.SPB_ID).get_member(self._user.id)
+        member = interaction.guild.get_member(self._user.id)
         post_message = await self.post_message
 
         if self.bot.DEBUG is False:
@@ -430,18 +456,17 @@ class Profile(ManagedObject):
         view = ProfileUserMuteView(self)
 
         # Handling threads
-        channel = self.manager.guild.channel_manager.profiles_channel
-        matching_thread = next((t for t in channel.threads if t.name.lower() == self.char_name.lower()), None)
-
+        matching_thread = next((t for t in post_channel.threads if t.name.lower() == self.char_name.lower()), None)
+        applied_tags = await self.get_tags()
         if matching_thread:
             # Clear the matching thread
-            await matching_thread.edit(applied_tags=self.get_tags())
+            await matching_thread.edit(applied_tags=applied_tags)
             async for m in matching_thread.history():
                 await m.delete()
             action = matching_thread.send  # type: ignore
         else:
             # Or create a new thread if no matching one
-            action = lambda **kw: channel.create_thread(name=self.char_name, applied_tags=self.get_tags(), **kw)
+            action = lambda **kw: post_channel.create_thread(name=self.char_name, applied_tags=applied_tags, **kw)
 
         self.bot.add_view(view)
 
@@ -453,7 +478,7 @@ class Profile(ManagedObject):
             else:
                 self.post_message = result
         except Forbidden:
-            error = InsufficientPermissions(channel, "Send Messages")
+            error = InsufficientPermissions(post_channel, "Send Messages")
             await interaction.respond(embed=error, ephemeral=True)
         else:
             await interaction.respond(embed=self.success_message())
@@ -501,7 +526,7 @@ class Profile(ManagedObject):
         view = ProfileUserMuteView(self)
         self.bot.add_view(view, message_id=post_message.id)
 
-        main_profile, availability, aboutme = self.compile()
+        main_profile, availability, aboutme = await self.compile()
         embeds = [main_profile, availability] + ([aboutme] if aboutme else [])
 
         try:
@@ -540,5 +565,26 @@ class Profile(ManagedObject):
             thumbnail_url=BotImages.ThumbsUpFrog,
             timestamp=True
         )
+
+################################################################################
+    async def mute_venue(self, interaction: Interaction, venue: Venue) -> None:
+
+        if venue in self.muted_venues:
+            self._muted_venue_ids.remove(venue.id)
+            flag = False
+        else:
+            self._muted_venue_ids.append(venue.id)
+            flag = True
+        self.update()
+
+        confirm = U.make_embed(
+            title="Venue Mute Toggle",
+            description=(
+                f"Venue pings for {venue.name} have been "
+                f"{'enabled' if flag else 'disabled'}.\n\n"
+                f"{U.draw_line(extra=25)}"
+            )
+        )
+        await interaction.respond(embed=confirm, ephemeral=True)
 
 ################################################################################
