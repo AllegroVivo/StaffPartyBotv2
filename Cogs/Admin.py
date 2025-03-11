@@ -72,15 +72,6 @@ class Admin(Cog):
 
 ################################################################################
     @admin.command(
-        name="positions",
-        description="Manage the position system for the server."
-    )
-    async def admin_positions(self, ctx: ApplicationContext) -> None:
-
-        await self.bot.position_manager.main_menu(ctx.interaction)
-
-################################################################################
-    @admin.command(
         name="yeet_venue",
         description="Remove a venue from the system."
     )

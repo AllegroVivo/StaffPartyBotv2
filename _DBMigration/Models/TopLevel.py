@@ -42,6 +42,7 @@ class TopLevelDataModel(Base):
 
     # Relationships
     venues = relationship("VenueModel", back_populates="top_level", passive_deletes=True)
+    positions = relationship("PositionModel", back_populates="top_level", passive_deletes=True)
     bg_checks = relationship("BGCheckModel", back_populates="top_level", passive_deletes=True)
     profiles = relationship("StaffProfileModel", back_populates="top_level", passive_deletes=True)
     temporary_jobs = relationship("TemporaryJobPostingModel", back_populates="top_level", passive_deletes=True)

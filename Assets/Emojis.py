@@ -34,4 +34,10 @@ class BotEmojis:
     ThumbsDown = PartialEmoji.from_str("👎")
     ThumbsUp = PartialEmoji.from_str("👍")
 
+    Bartender = PartialEmoji.from_str("<a:bartender:1168135253387378748>")
+    Dancer = PartialEmoji.from_str("<a:dancer:1168134583158575175>")
+    Greeter = PartialEmoji.from_str("<a:greeter:1168134573926912071>")
+    Host = PartialEmoji.from_str("<a:host:1168134582000943124>")
+    PartyBus = PartialEmoji.from_str("<a:party_bus:1225557207836393645>")
+
 ################################################################################

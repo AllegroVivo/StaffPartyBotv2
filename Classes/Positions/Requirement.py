@@ -26,9 +26,9 @@ class Requirement(Identifiable):
     )
 
 ################################################################################
-    def __init__(self, mgr: PositionManager, _id: int, **kwargs) -> None:
+    def __init__(self, mgr: PositionManager, id: int, **kwargs) -> None:
 
-        super().__init__(_id)
+        super().__init__(id)
         self._mgr: PositionManager = mgr
 
         self._position: Optional[Position] = kwargs.get("position", kwargs.get("position_id"))

@@ -76,7 +76,7 @@ class Venues(Cog):
     )
     async def venue_profile(self, ctx: ApplicationContext) -> None:
 
-        await self.bot.venue_manager.venue_menu(ctx.interaction)
+        await self.bot.venue_manager.new_venue_menu(ctx.interaction)
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:

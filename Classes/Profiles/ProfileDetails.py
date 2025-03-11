@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from discord import Embed, EmbedField, Interaction, User, SelectOption
 
 from Assets import BotEmojis
-from Enums import Timezone, Weekday, Hours
+from Enums import Timezone, Weekday, Hours, Position
 from UI.Common import BasicTextModal, AccentColorModal, FroggeSelectView, TimeSelectView
 from UI.Profiles import ProfileJobsModal, ProfileDetailsStatusView
 from Utilities import Utilities as U, FroggeColor
@@ -15,7 +15,7 @@ from .Availability import Availability
 from .ProfileSection import ProfileSection
 
 if TYPE_CHECKING:
-    from Classes import Profile, Position
+    from Classes import Profile
     from UI.Common import FroggeView
 ################################################################################
 
@@ -30,7 +30,7 @@ class ProfileDetails(ProfileSection):
         "_color",
         "_jobs",
         "_rates",
-        "_position_ids",
+        "_positions",
         "_availability",
         "_dm_pref",
         "_tz",
@@ -50,7 +50,11 @@ class ProfileDetails(ProfileSection):
         )
         self._jobs: List[str] = kwargs.get("jobs", [])
         self._rates: Optional[str] = kwargs.get("rates")
-        self._position_ids: List[int] = kwargs.get("position_ids", [])
+        self._positions: List[Position] = [
+            Position(pos_id)
+            for pos_id
+            in kwargs.get("position_ids", [])
+        ]
         self._availability: List[Availability] = [
             Availability(self.parent, **a)
             for a in
@@ -127,12 +131,12 @@ class ProfileDetails(ProfileSection):
     @property
     def positions(self) -> List[Position]:
 
-        return [self.bot.position_manager[pos_id] for pos_id in self._position_ids]
+        return self._positions
 
     @positions.setter
     def positions(self, value: List[int]) -> None:
 
-        self._position_ids = value
+        self._positions = value
         self.update()
 
 ################################################################################
@@ -178,7 +182,7 @@ class ProfileDetails(ProfileSection):
             "color": self._color.value if self._color else None,
             "jobs": self._jobs,
             "rates": self._rates,
-            "position_ids": self._position_ids,
+            "position_ids": [p.value for p in self._positions],
             "dm_pref": self._dm_pref,
             "timezone": self._tz.key if self._tz else None,
         }
@@ -198,7 +202,7 @@ class ProfileDetails(ProfileSection):
         # Group the positions in chunks of 4, then join each chunk
         # with a comma and each group with "\n"
         positions = "\n".join(
-            ", ".join(f"`{p.name}`" for p in self.positions[i:i+3])
+            ", ".join(f"`{p.proper_name}`" for p in self.positions[i:i+3])
             for i in range(0, len(self.positions), 3)
         ) if self.positions else "`Not Set`"
 
@@ -246,7 +250,7 @@ class ProfileDetails(ProfileSection):
 ################################################################################
     def compile(self) -> Any:
 
-        position_str = ", ".join([f"`{p.name}`" for p in self.positions])
+        position_str = ", ".join([f"`{p.proper_name}`" for p in self.positions])
         availability = U.make_embed(
             color=self.color,
             title="__Availability__",
@@ -391,20 +395,11 @@ class ProfileDetails(ProfileSection):
 ################################################################################
     async def set_positions(self, interaction: Interaction) -> None:
 
-        base_options = self.bot.position_manager.select_options()
-        options = [
-            SelectOption(
-                label=option.label,
-                value=option.value,
-                default=int(option.value) in [p.id for p in self.positions]
-            ) for option in base_options
-        ]
-
         prompt = U.make_embed(
             title="Set Positions",
             description="Please select the positions you are qualified to work."
         )
-        view = FroggeSelectView(interaction.user, options, multi_select=True)
+        view = FroggeSelectView(interaction.user, Position.select_options(), multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -412,7 +407,7 @@ class ProfileDetails(ProfileSection):
         if not view.complete or view.value is False:
             return
 
-        self.positions = [int(v) for v in view.value]
+        self.positions = [Position(int(v)) for v in view.value]
         await self.update_post_components()
 
 ################################################################################

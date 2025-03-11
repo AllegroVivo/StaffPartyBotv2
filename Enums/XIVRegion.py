@@ -36,7 +36,7 @@ class XIVRegion(FroggeEnum):
         return self.name
     
 ################################################################################
-    def contains(self, dc: DataCenter) -> bool:
+    def contains(self, dc: "DataCenter") -> bool:
 
         if dc is None:
             return False

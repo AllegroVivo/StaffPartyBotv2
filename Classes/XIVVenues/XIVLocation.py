@@ -41,3 +41,30 @@ class XIVLocation:
         )
 
 ################################################################################
+    def format(self) -> str:
+
+        ret = ""
+
+        if self.data_center:
+            ret += f"{self.data_center}"
+        if self.world:
+            ret += f", {self.world}"
+        if self.zone:
+            ret += f", {self.zone}"
+        if self.ward:
+            ret += f", Ward {self.ward}"
+        if self.subdivision:
+            ret += " (Sub)"
+        if self.plot:
+            ret += f", Plot {self.plot}"
+        if self.apartment:
+            ret += f", Apt. {self.apartment}"
+        if self.room:
+            ret += f", Room {self.room}"
+
+        if not ret:
+            ret = "Location Not Set"
+
+        return ret
+
+################################################################################

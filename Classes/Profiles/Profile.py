@@ -25,10 +25,11 @@ from Utilities import Utilities as U, FroggeColor
 from .ProfilePersonality import ProfilePersonality
 from .ProfileImages import ProfileImages
 from Errors import InsufficientPermissions
+from Enums import Position
 from UI.Common import CloseMessageView
 
 if TYPE_CHECKING:
-    from Classes import ProfileManager, Position, Venue
+    from Classes import ProfileManager, Venue
     from UI.Common import FroggeView
 ################################################################################
 
@@ -178,7 +179,7 @@ class Profile(ManagedObject):
 
         return all([
             self._aag._data_centers,
-            self._details._position_ids,
+            self._details._positions,
             self._details._availability,
             self._details._name,
         ])
@@ -341,7 +342,7 @@ class Profile(ManagedObject):
 
         # Map each position to its weight, defaulting to a high number if not found
         weighted_positions = [
-            (job, U.JOB_WEIGHTS.get(job.name.lower(), 100))
+            (job, U.JOB_WEIGHTS.get(job, 100))
             for job in self._details.positions
         ]
 
@@ -349,9 +350,7 @@ class Profile(ManagedObject):
         weighted_positions.sort(key=lambda x: x[1])
 
         # Extract the top four jobs (or fewer if less than four are provided)
-        top_positions = [pos[0] for pos in weighted_positions[:4]]
-
-        return top_positions
+        return [pos[0] for pos in weighted_positions[:4]]
 
 ################################################################################
     async def get_tags(self) -> List[ForumTag]:
@@ -369,7 +368,7 @@ class Profile(ManagedObject):
             if t.name.lower() == tag_text.lower()
         ]
         # Add position tags according to weights
-        top_positions = [p.name.lower() for p in self._get_top_positions()]
+        top_positions = [p.proper_name.lower() for p in self._get_top_positions()]
         tags += [
             t for t in post_channel.available_tags
             if t.name.lower() in
@@ -428,24 +427,6 @@ class Profile(ManagedObject):
             )
             await interaction.respond(embed=error, ephemeral=True)
             return
-
-        # member = self.bot.get_guild(self.bot.SPB_ID).get_member(self._user.id)
-        member = interaction.guild.get_member(self._user.id)
-        post_message = await self.post_message
-
-        if self.bot.DEBUG is False:
-            if post_message is None:
-                all_pos_roles = [
-                    await pos.role for pos in self.bot.position_manager.positions
-                    if pos._role.id is not None
-                ]
-                await member.remove_roles(*all_pos_roles)
-
-                pos_roles = [
-                    await pos.role for pos in self._details.positions
-                    if pos._role.id is not None
-                ]
-                await member.add_roles(*pos_roles)
 
         if await self.update_post_components(True, True):
             await interaction.respond(embed=self.success_message())

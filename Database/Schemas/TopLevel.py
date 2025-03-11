@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from .BGChecks import BGCheckManagerSchema
 from .Jobs import JobsManagerSchema
 from .Profiles import ProfileManagerSchema
-from .Positions import PositionManagerSchema
 from .Venues import VenueManagerSchema
 ################################################################################
 
@@ -66,7 +65,6 @@ class MasterResponseSchema(BaseModel):
     channel_manager: ChannelManagerSchema
     role_manager: RoleManagerSchema
     venue_manager: VenueManagerSchema
-    position_manager: PositionManagerSchema
     bg_check_manager: BGCheckManagerSchema
     profile_manager: ProfileManagerSchema
     jobs_manager: JobsManagerSchema

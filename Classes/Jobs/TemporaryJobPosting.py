@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, UTC
+from zoneinfo import ZoneInfo
 from typing import TYPE_CHECKING, Optional, Type, TypeVar
 
 from discord import (
@@ -14,12 +15,12 @@ from discord import (
 )
 
 from Classes.Common import Identifiable, LazyUser, LazyMessage
-from Enums import Weekday
+from Enums import Weekday, Position
 from UI.Jobs import JobPostingPickupView
 from Utilities import Utilities as U
 
 if TYPE_CHECKING:
-    from Classes import JobPostingManager, Position, Venue, StaffPartyBot
+    from Classes import JobPostingManager, Venue, StaffPartyBot
     from UI.Common import FroggeView
 ################################################################################
 
@@ -34,7 +35,7 @@ class TemporaryJobPosting(Identifiable):
         "_mgr",
         "_user",
         "_venue_id",
-        "_position_id",
+        "_position",
         "_salary",
         "_start",
         "_end",
@@ -56,12 +57,12 @@ class TemporaryJobPosting(Identifiable):
         self._candidate: LazyUser = LazyUser(self, kwargs.get("candidate_id"))
 
         self._description: str = kwargs.pop("description")
-        self._position_id: int = kwargs.pop("position_id")
+        self._position: Position = Position(kwargs.pop("position_id"))
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
 
         self._salary: str = kwargs.get("salary")
-        self._start: datetime = kwargs.get("start_dt")
-        self._end: datetime = kwargs.get("end_dt")
+        self._start: datetime = kwargs.get("start_dt").replace(tzinfo=ZoneInfo("UTC"))
+        self._end: datetime = kwargs.get("end_dt").replace(tzinfo=ZoneInfo("UTC"))
 
         self._schedule_updated: bool = False
 
@@ -82,7 +83,7 @@ class TemporaryJobPosting(Identifiable):
         new_data = mgr.bot.db.insert.temporary_job(
             venue_id=venue.id,
             user_id=user.id,
-            position_id=position.id,
+            position_id=position.value,
             description=description,
             salary=salary,
             start_dt=start_dt,
@@ -139,7 +140,7 @@ class TemporaryJobPosting(Identifiable):
     @property
     def position(self) -> Position:
 
-        return self.bot.position_manager[self._position_id]
+        return self._position
 
 ################################################################################
     @property
@@ -191,12 +192,12 @@ class TemporaryJobPosting(Identifiable):
         )
 
         return U.make_embed(
-            title=f"`{self.position.name}` needed at `{self.venue.name}`",
+            title=f"`{self.position.proper_name}` needed at `{self.venue.name}`",
             description=description,
             fields=[
                 EmbedField(
                     name="__Position__",
-                    value=f"`{self.position.name}`",
+                    value=f"`{self.position.proper_name}`",
                     inline=True
                 ),
                 EmbedField(
@@ -248,12 +249,12 @@ class TemporaryJobPosting(Identifiable):
         post_view = JobPostingPickupView(self)
         self.bot.add_view(post_view)
 
-        pos_thread = next((t for t in channel.threads if t.name.lower() == self.position.name.lower()), None)
+        pos_thread = next((t for t in channel.threads if t.name.lower() == self.position.proper_name.lower()), None)
         try:
             if pos_thread is not None:
                 self.post_message = await pos_thread.send(embed=await self.compile(), view=post_view)
             else:
-                pos_thread = await channel.create_thread(name=self.position.name, embed=await self.compile(), view=post_view)
+                pos_thread = await channel.create_thread(name=self.position.proper_name, embed=await self.compile(), view=post_view)
                 self.post_message = pos_thread.last_message
 
             confirm = U.make_embed(
@@ -311,7 +312,6 @@ class TemporaryJobPosting(Identifiable):
         user: User,
         compare_hiatus: bool,
         compare_data_centers: bool,
-        compare_linked_role: bool,
         compare_schedule: bool,
         check_profile: bool
     ) -> bool:
@@ -339,18 +339,6 @@ class TemporaryJobPosting(Identifiable):
             if not any(dc.contains(self.venue.location.data_center) for dc in profile.ataglance.data_centers):
                 return False
 
-        # Check if the user has the linked role for the job position, if applicable
-        if compare_linked_role:
-            linked_role = await self.position.role
-            if linked_role is not None:
-                try:
-                    member = await self.bot.SPB_GUILD.fetch_member(user.id)
-                except:
-                    return False
-                else:
-                    if linked_role not in member.roles:
-                        return False
-
         # If comparing schedules, check if the user is available during the job's times
         if compare_schedule and check_profile:
             job_day = Weekday(self._start.weekday())
@@ -367,11 +355,10 @@ class TemporaryJobPosting(Identifiable):
 ################################################################################
     async def candidate_accept(self, interaction: Interaction) -> None:
 
-        if not self.is_user_eligible(
+        if not await self.is_user_eligible(
             interaction.user,
             compare_hiatus=False,
             compare_data_centers=False,
-            compare_linked_role=True,
             compare_schedule=False,
             check_profile=True
         ):
@@ -395,7 +382,7 @@ class TemporaryJobPosting(Identifiable):
             title="Job Accepted",
             description=(
                 f"__**Position**__\n"
-                f"`{self.position.name}`\n"
+                f"`{self.position.proper_name}`\n"
                 f"*({self.venue.name})*\n\n"
 
                 f"__**Picked Up By**__\n"
@@ -432,7 +419,7 @@ class TemporaryJobPosting(Identifiable):
             title="Job Canceled",
             description=(
                 f"__**Position**__\n\n"
-                f"`{self.position.name}`\n"
+                f"`{self.position.proper_name}`\n"
                 f"*({self.venue.name})*\n\n"
 
                 "The previous candidate has removed themself from this job posting.\n\n"
@@ -459,11 +446,10 @@ class TemporaryJobPosting(Identifiable):
 
         eligible = [
             profile for profile in self.bot.profile_manager.profiles
-            if self.is_user_eligible(
+            if await self.is_user_eligible(
                 user=await profile.user,
                 compare_hiatus=True,
                 compare_data_centers=True,
-                compare_linked_role=True,
                 compare_schedule=True,
                 check_profile=True
             )
@@ -474,7 +460,7 @@ class TemporaryJobPosting(Identifiable):
         embed = U.make_embed(
             title="Job Posting Alert",
             description=(
-                f"An opportunity has been posted for a `{self.position.name}` position at "
+                f"An opportunity has been posted for a `{self.position.proper_name}` position at "
                 f"`{self.venue.name}`. If you're interested, you can [view the posting "
                 f"here]({self.post_url})."
             )
@@ -485,5 +471,14 @@ class TemporaryJobPosting(Identifiable):
                 await (await profile.user).send(embed=embed)
             except Exception:
                 continue
+
+################################################################################
+    def format(self) -> str:
+
+        return (
+            f"**{self.position.proper_name}** at {self.venue.name}\n"
+            f"**Start:** {U.format_dt(self._start, 'F')}\n"
+            f"**End:** {U.format_dt(self._end, 'F')}\n"
+        )
 
 ################################################################################

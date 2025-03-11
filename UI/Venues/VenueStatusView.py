@@ -9,7 +9,7 @@ from Assets import BotEmojis
 from UI.Common import FroggeView, CloseMessageButton, FroggeButton
 
 if TYPE_CHECKING:
-    from Classes import Venue, Position, VenueTag
+    from Classes import Venue, VenueTag
 ################################################################################
 
 __all__ = ("VenueStatusView",)
@@ -28,7 +28,7 @@ class VenueStatusView(FroggeView):
             SetPositionsButton(),
             LogoButton(),
             MuteReportButton(),
-            CreateTempJobButton(),
+            JobsMenuButton(),
             PostVenueButton(),
             UpdateVenueButton(),
             CloseMessageButton()
@@ -153,19 +153,19 @@ class MuteReportButton(FroggeButton):
         await self.view.ctx.mute_list_report(interaction)
         
 ################################################################################
-class CreateTempJobButton(FroggeButton):
+class JobsMenuButton(FroggeButton):
 
     def __init__(self) -> None:
 
         super().__init__(
             style=ButtonStyle.primary,
-            label="Create Temp Job",
+            label="Temp/Perm Job Management",
             row=1,
             disabled=False
         )
 
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.temp_job_wizard(interaction)
+        await self.view.ctx.jobs_posting_menu(interaction)
 
 ################################################################################
 class PostVenueButton(Button):

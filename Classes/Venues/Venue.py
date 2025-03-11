@@ -6,16 +6,17 @@ from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel,
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
-from Enums import RPLevel
+from Enums import RPLevel, Position
 from UI.Common import FroggeView, FroggeSelectView, ConfirmCancelView, BasicTextModal
 from UI.Venues import VenuePostingMuteView, VenueStatusView
 from .VenueLocation import VenueLocation
 from .VenueHours import VenueHours
 from .VenueURLs import VenueURLs
 from Utilities import Utilities as U
+from .VenueJobSupervisor import VenueJobSupervisor
 
 if TYPE_CHECKING:
-    from Classes import VenueManager, XIVVenue, Position
+    from Classes import VenueManager, XIVVenue
 ################################################################################
 
 __all__ = ("Venue",)
@@ -42,6 +43,7 @@ class Venue(ManagedObject):
         "_mare_pass",
         "_mutes",
         "_xiv_id",
+        "_job_super",
     )
 
 ################################################################################
@@ -72,7 +74,7 @@ class Venue(ManagedObject):
             VenueHours(self, **sch)
             for sch in kwargs.get("schedules", [])
         ]
-        self._positions: List[Position] = kwargs.get("positions", kwargs.get("position_ids", []))
+        self._positions: List[Position] = [Position(p) for p in kwargs.get("position_ids", [])]
 
         self._users: List[LazyUser] = [
             LazyUser(self, user_id)
@@ -86,6 +88,8 @@ class Venue(ManagedObject):
         self._urls: VenueURLs = VenueURLs(self, **kwargs)
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
 
+        self._job_super: VenueJobSupervisor = VenueJobSupervisor(self)
+
 ################################################################################
     @classmethod
     async def new(cls: Type[V], mgr: VenueManager, xiv_venue: XIVVenue) -> V:
@@ -98,12 +102,8 @@ class Venue(ManagedObject):
 ################################################################################
     async def finalize_load(self) -> None:
 
-        self._positions = [
-            self.bot.position_manager[pos_id]  # type: ignore
-            for pos_id in self._positions
-        ]
-
-        await self.update_post_components(False)
+        # await self.update_post_components(False)
+        pass
 
 ################################################################################
     @property
@@ -243,6 +243,12 @@ class Venue(ManagedObject):
 
 ################################################################################
     @property
+    def jobs(self) -> VenueJobSupervisor:
+
+        return self._job_super
+
+################################################################################
+    @property
     def schedule(self) -> List[VenueHours]:
 
         return sorted(self._schedule, key=lambda x: x._day.value)
@@ -277,7 +283,7 @@ class Venue(ManagedObject):
             "nsfw": self._nsfw,
             "rp_level": self._rp_level.value if self._rp_level else None,
             "user_ids": [u.id for u in self._users],
-            "position_ids": [p.id for p in self._positions],
+            "position_ids": [p.value for p in self._positions],
             "mute_ids": [u.id for u in self._mutes],
             "tags": self._tags,
             "post_url": self._post_msg.id,
@@ -326,7 +332,7 @@ class Venue(ManagedObject):
 
         if self.hiring:
             if self.positions:
-                positions_list = [f"`{pos.name}`" for pos in self.positions]
+                positions_list = [f"`{pos.proper_name}`" for pos in self.positions]
                 positions_formatted = [
                     ', '.join(positions_list[i:i+5])
                     for i in range(0, len(positions_list), 5)
@@ -457,10 +463,10 @@ class Venue(ManagedObject):
     async def post(
         self,
         interaction: Optional[Interaction],
-        channel: ForumChannel,
         rp_bypass: bool = False
     ) -> None:
 
+        channel = await self.bot.venue_manager.post_channel
         if channel is None:
             if interaction is not None:
                 error = U.make_error(
@@ -542,7 +548,7 @@ class Venue(ManagedObject):
         )
 
 ################################################################################
-    async def update_post_components(self, status: bool, update_view: bool = True) -> None:
+    async def update_post_components(self, status: bool = True, update_view: bool = True) -> None:
 
         post_message = await self.post_message
         if post_message is None:
@@ -613,8 +619,7 @@ class Venue(ManagedObject):
                 "***You may select multiple positions.***"
             )
         )
-        options = [p.select_option(p in self._positions) for p in self.bot.position_manager.positions]
-        view = FroggeSelectView(interaction.user, options, multi_select=True)
+        view = FroggeSelectView(interaction.user, Position.select_options(), multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -622,7 +627,7 @@ class Venue(ManagedObject):
         if not view.complete or view.value is False:
             return
 
-        self.positions = [self.bot.position_manager[v] for v in view.value]
+        self.positions = [Position(int(v)) for v in view.value]
 
 ################################################################################
     async def remove(self, interaction: Interaction) -> None:
@@ -759,7 +764,7 @@ class Venue(ManagedObject):
         )
         view = FroggeSelectView(
             owner=interaction.user,
-            options=[p.select_option() for p in self.bot.position_manager.positions],
+            options=Position.select_options(),
             multi_select=True
         )
 
@@ -769,7 +774,7 @@ class Venue(ManagedObject):
         if not view.complete or view.value is False:
             return
 
-        self.positions = [self.bot.position_manager[v] for v in view.value]
+        self.positions = [Position(int(v)) for v in view.value]
         await self.update_post_components(True)
 
         prompt = U.make_embed(
@@ -781,15 +786,14 @@ class Venue(ManagedObject):
                 
                 "Please upload the image you'd like to use to this channel now.\n"
                 "*(Yeah, just upload it normally into discord like you're going to share it.)*"
-            )
+            ),
+            footer_text="Type 'CANCEL' to skip this step."
         )
         image_url = await U.wait_for_image(interaction, prompt)
-        if image_url is None:
-            return
-
-        self._urls.logo = image_url
-        self.update()
-        await self.update_post_components(True)
+        if image_url is not None:
+            self._urls.logo = image_url
+            self.update()
+            await self.update_post_components(True)
 
         confirm = U.make_embed(
             title="Venue Import Complete",
@@ -814,5 +818,10 @@ class Venue(ManagedObject):
     async def temp_job_wizard(self, interaction: Interaction) -> None:
 
         await self.bot.jobs_manager.temp_job_wizard(interaction, self)
+
+################################################################################
+    async def jobs_posting_menu(self, interaction: Interaction) -> None:
+
+        await self._job_super.menu(interaction)
 
 ################################################################################

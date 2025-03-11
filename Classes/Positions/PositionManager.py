@@ -10,9 +10,10 @@ from UI.Positions import PositionManagerMenuView
 from .Position import Position
 from Utilities import Utilities as U
 from UI.Common import BasicTextModal, FroggeMultiMenuSelect
+from .Requirement import Requirement
 
 if TYPE_CHECKING:
-    from Classes import StaffPartyBot, Requirement
+    from Classes import StaffPartyBot
     from UI.Common import FroggeView
 ################################################################################
 

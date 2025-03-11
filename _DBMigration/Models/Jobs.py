@@ -28,7 +28,7 @@ class TemporaryJobPostingModel(Base):
     user_id = Column(BigInteger, nullable=False)
     candidate_id = Column(BigInteger, nullable=True)
     description = Column(String, nullable=False)
-    position_id = Column(Integer, nullable=False)
+    position_id = Column(Integer, ForeignKey("positions.id", name="temporary_jobs_positions_fkey", ondelete="CASCADE"), nullable=False)
     post_url = Column(String, nullable=True)
     salary = Column(String, nullable=True)
     start_dt = Column(TIMESTAMP, nullable=False)
@@ -37,5 +37,6 @@ class TemporaryJobPostingModel(Base):
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="temporary_jobs")
     venue = relationship("VenueModel", back_populates="temporary_jobs")
+    position = relationship("PositionModel", back_populates="temporary_jobs")
 
 ################################################################################

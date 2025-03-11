@@ -24,6 +24,7 @@ from discord.abc import GuildChannel
 
 from Assets import BotEmojis
 from Enums.Timezone import Timezone
+from Enums.Position import Position
 from UI.Common.FroggeMultiMenuSelect import FroggeMultiMenuSelect
 from .Colors import CustomColor
 from .ErrorMessage import ErrorMessage
@@ -67,22 +68,22 @@ class Utilities:
     }
 
     JOB_WEIGHTS = {
-        'gamba': 1,
-        'shout runner': 2,
-        'bartender': 3,
-        'greeter': 4,
-        'photographer': 5,
-        'dj': 6,
-        'courtesan': 7,
-        'exotic dancer': 8,
-        'host-dancer': 9,
-        'pillow': 10,
-        'security': 11,
-        'tarot reader': 12,
-        'manager': 13,
-        'rp flex': 14,
-        'pf attendant': 15,
-        'bard': 16
+        Position.Gamba: 1,
+        Position.Shout_Runner: 2,
+        Position.Bartender: 3,
+        Position.Greeter: 4,
+        Position.Photographer: 5,
+        Position.DJ: 6,
+        Position.Courtesan: 7,
+        Position.Exotic_Dancer: 8,
+        Position.Host: 9,
+        Position.Pillow: 10,
+        Position.Security: 11,
+        Position.Tarot_Reader: 12,
+        Position.Manager: 13,
+        Position.RP_Flex: 14,
+        Position.PF_Attendant: 15,
+        Position.Bard: 16,
     }
 
 ################################################################################
@@ -632,7 +633,7 @@ class Utilities:
             await interaction.respond("*Image could not be cleaned up, sorry!*")
 
         try:
-            await msg.delete_original_response()
+            await msg.delete()
         except NotFound:
             pass
         

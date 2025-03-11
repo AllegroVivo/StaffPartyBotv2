@@ -45,14 +45,12 @@ class DatabaseLoader:
         with self._parent._get_db() as db:
             top_level = db.query(TopLevelDataModel).options(
                 selectinload(TopLevelDataModel.venues).selectinload(VenueModel.schedules),
-                selectinload(TopLevelDataModel.positions).selectinload(PositionModel.requirements),
                 selectinload(TopLevelDataModel.bg_checks).selectinload(BGCheckModel.venues),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.additional_images),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
                 selectinload(TopLevelDataModel.temporary_jobs),
                 selectinload(TopLevelDataModel.permanent_jobs),
             ).first()
-            global_reqs = db.query(RequirementModel).filter_by(position_id=None).all()
 
             def map_schema(schema: Type[T], objects: List[Any]) -> List[T]:
                 return [schema.model_validate(obj) for obj in objects]
@@ -66,15 +64,6 @@ class DatabaseLoader:
                             v,
                             context={"schedules": map_schema(VenueScheduleSchema, v.schedules)}
                         ) for v in top_level.venues
-                    ]
-                ),
-                position_manager=PositionManagerSchema(
-                    global_requirements=[RequirementSchema.model_validate(req) for req in global_reqs],
-                    positions=[
-                        PositionSchema.model_validate(
-                            p,
-                            context={"requirements": map_schema(RequirementSchema, p.requirements)}
-                        ) for p in top_level.positions
                     ]
                 ),
                 bg_check_manager=BGCheckManagerSchema(

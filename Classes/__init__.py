@@ -6,5 +6,6 @@ if TYPE_CHECKING:
     from .Positions import *
     from .Profiles import *
     from .Venues import *
+    from .Welcome import *
     from .XIVVenues import *
 ################################################################################

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import zoneinfo
 import os
-from datetime import timedelta
 from typing import TYPE_CHECKING, Optional, Union
 
 import cloudinary
@@ -10,21 +8,18 @@ import cloudinary.uploader
 from discord import Bot, Attachment, Guild, NotFound, Member, User, Message, Interaction
 from discord.abc import GuildChannel
 from dotenv import load_dotenv
-from discord.ext import tasks
-import discord.utils
 
 from Classes.BackgroundChecks.BGCheckManager import BGCheckManager
-from Classes.Positions.PositionManager import PositionManager
+from Classes.Jobs.JobPostingManager import JobPostingManager
+from Classes.Profiles.ProfileManager import ProfileManager
 from Classes.Venues.VenueManager import VenueManager
+from Classes.Welcome.WelcomeManager import WelcomeManager
 from Classes.XIVVenues.XIVVenuesClient import XIVVenuesClient
 from Database.Database import Database
 from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
 from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
-from Classes.Profiles.ProfileManager import ProfileManager
-from Classes.Jobs.JobPostingManager import JobPostingManager
-from Utilities import Utilities as U
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -34,6 +29,21 @@ __all__ = ("StaffPartyBot", )
 
 ################################################################################
 class StaffPartyBot(Bot):
+
+    __slots__ = (
+        "_img_dump",
+        "_guild_mgr",
+        "_db",
+        "_xiv_client",
+        "_logger",
+        "_channel_mgr",
+        "_role_mgr",
+        "_venue_mgr",
+        "_bg_check_mgr",
+        "_profile_mgr",
+        "_jobs_mgr",
+        "_welcome_mgr"
+    )
 
     IMAGE_DUMP = 991902526188302427
     SPB_ID = 1104515062187708525
@@ -68,11 +78,11 @@ class StaffPartyBot(Bot):
         self._channel_mgr: ChannelManager = ChannelManager(self)
         self._role_mgr: RoleManager = RoleManager(self)
 
-        self._position_mgr: PositionManager = PositionManager(self)
         self._venue_mgr: VenueManager = VenueManager(self)
         self._bg_check_mgr: BGCheckManager = BGCheckManager(self)
         self._profile_mgr: ProfileManager = ProfileManager(self)
         self._jobs_mgr: JobPostingManager = JobPostingManager(self)
+        self._welcome_mgr: WelcomeManager = WelcomeManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -123,8 +133,6 @@ class StaffPartyBot(Bot):
         self._channel_mgr.load_all(payload["channel_manager"])
         self._role_mgr.load_all(payload["role_manager"])
 
-        print("Loading positions...")
-        await self._position_mgr.load_all(payload["position_manager"])
         print("Loading venues...")
         await self._venue_mgr.load_all(payload["venue_manager"])
         print("Loading background checks...")
@@ -177,12 +185,6 @@ class StaffPartyBot(Bot):
     def venue_manager(self) -> VenueManager:
 
         return self._venue_mgr
-
-################################################################################
-    @property
-    def position_manager(self) -> PositionManager:
-
-        return self._position_mgr
 
 ################################################################################
     @property
@@ -334,63 +336,6 @@ class StaffPartyBot(Bot):
     async def on_member_join(self, member: Member) -> None:
 
         await self.log.on_member_join(member)
-        self.member_welcome.start(member)
-
-################################################################################
-    @tasks.loop(count=1)
-    async def member_welcome(self, member: Member) -> None:
-
-        welcome_channel = await self.channel_manager.welcome_channel
-        if not welcome_channel:
-            return
-
-        welcome_message = (
-            "# __Welcome to the <a:party_bus:1225557207836393645> "
-            "Staff Party Bus!! <a:party_bus:1225557207836393645>__\n\n"
-
-            f"Hiya, {member.mention}! I'm the Staff Party Bot, and I'm going to be "
-            f"your best friend throughout your time here at the Staff Party Bus!\n\n"
-        )
-
-        flag = False
-        attempts = 0
-        target_dt = member.joined_at
-        while attempts < 5:
-            target_dt += timedelta(minutes=1)
-            # One minute for role selection
-            await discord.utils.sleep_until(target_dt)
-
-            # Get updated member object
-            if get_member := self.SPB_GUILD.get_member(member.id):
-                member = get_member
-
-            if await self.role_manager.venue_management_role in member.roles:
-                welcome_message += (
-                    "It looks like you've selected the Venue Management role!\n"
-                    "You can follow the instructions <#1220087653815291954> to set up "
-                    "your venue profile \\o/ <a:bartender:1168135253387378748> \n\n"
-                )
-                flag = True
-            if await self.role_manager.staff_pending_role in member.roles:
-                welcome_message += (
-                    "I see you've picked the Staff Pending role!\n"
-                    "You can follow the instructions here <#1104515062636478643> to do "
-                    "your staff validation and you'll be able to create your staff "
-                    "profile afterwards! <a:dancer:1168134583158575175>\n\n"
-                )
-                flag = True
-
-            if flag:
-                break
-            else:
-                attempts += 1
-
-        if not flag:
-            welcome_message += (
-                "It looks like you haven't selected any roles yet! You can do so "
-                "in <#1104515062636478638> to get started! <a:host:1168134582000943124>"
-            )
-
-        await welcome_channel.send(welcome_message)
+        await self._welcome_mgr.welcome.start(member)
 
 ################################################################################

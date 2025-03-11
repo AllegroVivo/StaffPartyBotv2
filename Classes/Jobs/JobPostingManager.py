@@ -6,14 +6,14 @@ from zoneinfo import ZoneInfo
 
 from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption
 
-from Enums import Month, Timezone
+from Enums import Month, Timezone, Position
 from UI.Common import ConfirmCancelView, FroggeSelectView, BasicTextModal, FroggeMultiMenuSelect, TimeSelectView
 from Utilities import Utilities as U
 from .PermanentJobPosting import PermanentJobPosting
 from .TemporaryJobPosting import TemporaryJobPosting
 
 if TYPE_CHECKING:
-    from Classes import StaffPartyBot, Venue, Position
+    from Classes import StaffPartyBot, Venue
 ################################################################################
 
 __all__ = ("JobPostingManager", )
@@ -104,7 +104,7 @@ class JobPostingManager:
                 "share the same details (salary, start/end dates, etc.)."
             )
         )
-        view = FroggeSelectView(interaction.user, self.bot.position_manager.select_options(), multi_select=True)
+        view = FroggeSelectView(interaction.user, Position.select_options(), multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -112,7 +112,7 @@ class JobPostingManager:
         if not view.complete or view.value is False:
             return
 
-        positions: List[Position] = [self.bot.position_manager[pos_id] for pos_id in view.value]
+        positions = [Position(int(pos_id)) for pos_id in view.value]
         assert positions
         pos_descriptions = { p: p.description for p in positions }
 
@@ -149,7 +149,7 @@ class JobPostingManager:
                 ),
                 fields=[
                     EmbedField(
-                        name=p.name,
+                        name=p.proper_name,
                         value=p.description or "`No description provided.`",
                         inline=True
                     ) for p in positions
@@ -157,7 +157,7 @@ class JobPostingManager:
             )
             view = FroggeSelectView(
                 owner=interaction.user,
-                options=[p.select_option() for p in positions],
+                options=[p.select_option for p in positions],
                 multi_select=True,
                 return_interaction=True
             )
@@ -170,7 +170,7 @@ class JobPostingManager:
 
             pos_ids, inter = view.value
 
-            positions_to_update: List[Position] = [self.bot.position_manager[i] for i in pos_ids]
+            positions_to_update = [Position(int(i)) for i in pos_ids]
 
             for pos in positions_to_update:
                 modal = BasicTextModal(
@@ -256,15 +256,15 @@ class JobPostingManager:
         end_dt = start_dt + timedelta(minutes=int(view.value))
 
         for pos, descr in pos_descriptions.items():
-            new_job = TemporaryJobPosting.new(self, v, pos, descr, salary, start_dt, end_dt)
+            new_job = TemporaryJobPosting.new(self, v, interaction.user, pos, descr, salary, start_dt, end_dt)
             self._temporary.append(new_job)
 
             await new_job.create_post(inter)
             await inter.respond(
-                "Job posting created!"
+                "Job posting created!\n\n"
 
                 f"**Venue:** {v.name}\n"
-                f"**Position:** {pos.name}\n"
+                f"**Position:** {pos.proper_name}\n"
                 f"**Description:** {descr}\n"
                 f"**Salary:** {salary}\n"
                 f"**Start:** {U.format_dt(start_dt)}\n"

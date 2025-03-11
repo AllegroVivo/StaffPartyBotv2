@@ -12,6 +12,7 @@ __all__ = ("PermanentJobPosting", )
 class PermanentJobPosting:
 
     __slots__ = (
+        "_venue_id",  # Don't forget this!
     )
 
 ################################################################################
