@@ -1,6 +1,6 @@
 from .Profile import Profile
 from .ProfileManager import ProfileManager
-from .ProfileDetails import ProfileDetails
+from .ProfileMainInfo import ProfileMainInfo
 from .ProfileSection import ProfileSection
 from .Availability import Availability
 from .ProfileAtAGlance import ProfileAtAGlance

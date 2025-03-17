@@ -8,7 +8,7 @@ from Assets import BotEmojis
 from UI.Common import FroggeView, CloseMessageButton, FroggeButton
 
 if TYPE_CHECKING:
-    from Classes import ProfileDetails
+    from Classes import ProfileMainInfo
 ################################################################################
 
 __all__ = ("ProfileDetailsStatusView",)
@@ -16,18 +16,16 @@ __all__ = ("ProfileDetailsStatusView",)
 ################################################################################        
 class ProfileDetailsStatusView(FroggeView):
 
-    def __init__(self, user: User, details: ProfileDetails):
+    def __init__(self, user: User, details: ProfileMainInfo):
 
         super().__init__(user, details)
 
         button_list = [
             NameButton(),
-            CustomURLButton(),
-            ColorButton(),
+            SetRegionsButton(),
             SetAvailabilityButton(),
-            JobsButton(),
-            RatesButton(),
             PositionsButton(),
+            SetTrainingsButton(),
             ToggleDMPrefButton(),
             CloseMessageButton()
         ]
@@ -56,79 +54,41 @@ class NameButton(FroggeButton):
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
 
 ################################################################################
-class CustomURLButton(FroggeButton):
+class SetRegionsButton(FroggeButton):
     
     def __init__(self) -> None:
         
         super().__init__(
             style=ButtonStyle.secondary,
-            label="Custom URL",
+            label="Home Regions",
             disabled=False,
             row=0
         )
 
     def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.url)
+        self.set_style(self.view.ctx.regions)
         
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_url(interaction)
+        await self.view.ctx.set_regions(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
-class ColorButton(FroggeButton):
+class SetTrainingsButton(FroggeButton):
     
     def __init__(self) -> None:
         
         super().__init__(
             style=ButtonStyle.secondary,
-            label="Accent Color",
-            disabled=False,
-            row=0
-        )
-
-    def set_attributes(self) -> None:
-        self.set_style(self.view.ctx._color)
-        
-    async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_color(interaction)
-        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
-        
-################################################################################
-class JobsButton(FroggeButton):
-    
-    def __init__(self) -> None:
-        
-        super().__init__(
-            style=ButtonStyle.secondary,
-            label="RP Jobs",
+            label="Desired Trainings",
             disabled=False,
             row=1
         )
 
     def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.jobs)
+        self.set_style(self.view.ctx.trainings)
         
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_jobs(interaction)
-        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
-        
-################################################################################
-class RatesButton(FroggeButton):
-    
-    def __init__(self) -> None:
-        
-        super().__init__(
-            style=ButtonStyle.secondary,
-            label="Freelance Rates",
-            disabled=False,
-            row=1
-        )
-
-    def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.rates)
-        
-    async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_rates(interaction)
+        await self.view.ctx.set_trainings(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
@@ -138,7 +98,7 @@ class PositionsButton(FroggeButton):
         
         super().__init__(
             style=ButtonStyle.secondary,
-            label="Employable Positions",
+            label="Qualified Positions",
             disabled=False,
             row=1
         )

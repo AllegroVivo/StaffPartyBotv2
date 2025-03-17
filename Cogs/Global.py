@@ -23,16 +23,6 @@ class Global(Cog):
 
 ################################################################################
     @slash_command(
-        name="bg_check",
-        description="Fill out the mandatory background check form.",
-        contexts=[InteractionContextType.guild]
-    )
-    async def start_bg_check(self, ctx: ApplicationContext) -> None:
-
-        await self.bot.bg_check_manager.start_bg_check(ctx.interaction)
-
-################################################################################
-    @slash_command(
         name="help",
         description="Get help with using the bot.",
         contexts=[InteractionContextType.guild]

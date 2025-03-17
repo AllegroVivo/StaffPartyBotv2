@@ -99,3 +99,13 @@ class ProfileManager(ObjectManager):
         return False
 
 ################################################################################
+    def profiles_wanting_training(self) -> List[Profile]:
+
+        return [
+            p
+            for p in self.profiles
+            if p._main_info.trainings
+            and p.post_url is not None
+        ]
+
+################################################################################

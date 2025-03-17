@@ -230,3 +230,30 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating temporary job: {str(e)}")
 
 ################################################################################
+    def permanent_job(
+        self,
+        venue_id: int,
+        user_id: int,
+        position: int,
+        descr: str,
+        salary: Optional[str]
+    ) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_job = PermanentJobPostingModel(
+                    venue_id=venue_id,
+                    user_id=user_id,
+                    position_id=position,
+                    description=descr,
+                    salary=salary
+                )
+                db.add(new_job)
+                db.commit()
+                db.refresh(new_job)
+                return PermanentJobPostingSchema.model_validate(new_job).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating permanent job: {str(e)}")
+
+################################################################################

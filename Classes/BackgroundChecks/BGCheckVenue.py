@@ -41,7 +41,7 @@ class BGCheckVenue:
         new_data = parent.bot.db.insert.bg_check_venue(
             parent.id, name, data_center.value, world.value, jobs
         )
-        return cls(new_data["id"], name, data_center, world, jobs)
+        return cls(**new_data)
 
 ################################################################################
     def __eq__(self, other: BGCheckVenue) -> bool:

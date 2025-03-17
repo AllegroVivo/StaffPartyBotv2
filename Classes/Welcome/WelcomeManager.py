@@ -74,7 +74,8 @@ class WelcomeManager:
                     f"profile afterwards! {BotEmojis.Dancer}\n\n"
                 )
                 flag = True
-            if "trainee" in [r.name.lower() for r in member.roles]:
+            trainee = await self._state.role_manager.trainee_role
+            if trainee in member.roles:
                 welcome_message += (
                     "I see you've selected the Trainee role!\n"
                     "You can follow the instructions here <#1219488746664230974> to "

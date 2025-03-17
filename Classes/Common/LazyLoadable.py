@@ -130,4 +130,8 @@ class LazyMessage(LazyLoadable):
     def __init__(self, parent: Any, jump_url: Optional[str]) -> None:
         super().__init__(parent, LazyLoadableType.Message, jump_url)
 
+    @property
+    def url(self) -> Optional[str]:
+        return self._item_id
+
 ################################################################################

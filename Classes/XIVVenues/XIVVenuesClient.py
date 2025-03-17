@@ -50,9 +50,9 @@ class XIVVenuesClient:
         return [XIVVenue.from_data(venue) for venue in response.json()]
 
 ################################################################################
-    def get_venue_by_id(self, name: str) -> Optional[XIVVenue]:
+    def get_venue_by_id(self, _id: str) -> Optional[XIVVenue]:
 
-        query = self.URL_BASE + "?search=" + str(name)
+        query = self.URL_BASE + f"/{_id}"
 
         if self._state.DEBUG:
             print("Executing XIVClient query: " + query)

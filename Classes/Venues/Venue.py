@@ -16,7 +16,7 @@ from Utilities import Utilities as U
 from .VenueJobSupervisor import VenueJobSupervisor
 
 if TYPE_CHECKING:
-    from Classes import VenueManager, XIVVenue
+    from Classes import VenueManager, XIVVenue, Profile
 ################################################################################
 
 __all__ = ("Venue",)
@@ -619,12 +619,26 @@ class Venue(ManagedObject):
                 "***You may select multiple positions.***"
             )
         )
-        view = FroggeSelectView(interaction.user, Position.select_options(), multi_select=True)
+        options = [SelectOption(label="None", value="None", description="This will deactivate all DMs.")]
+        options.extend(Position.limited_select_options())
+        view = FroggeSelectView(interaction.user, options, multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
 
         if not view.complete or view.value is False:
+            return
+
+        if "None" in view.value:
+            if len(view.value) > 1:
+                error = U.make_error(
+                    title="Invalid Selection",
+                    message="You cannot select both `None` and other positions.",
+                    solution="Please try again."
+                )
+                await interaction.respond(embed=error, ephemeral=True)
+            else:
+                self.positions = []
             return
 
         self.positions = [Position(int(v)) for v in view.value]
@@ -813,11 +827,6 @@ class Venue(ManagedObject):
             label=self.name,
             value=str(self.id)
         )
-
-################################################################################
-    async def temp_job_wizard(self, interaction: Interaction) -> None:
-
-        await self.bot.jobs_manager.temp_job_wizard(interaction, self)
 
 ################################################################################
     async def jobs_posting_menu(self, interaction: Interaction) -> None:

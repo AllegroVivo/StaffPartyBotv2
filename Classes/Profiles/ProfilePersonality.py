@@ -138,8 +138,8 @@ class ProfilePersonality(ProfileSection):
                 title=f"About {self.parent.char_name}",
                 description=self.about_me,
                 footer_text=(
-                    self.parent._details.url
-                    if self.parent._details.url is not None
+                    self.parent._main_info.url
+                    if self.parent._main_info.url is not None
                     else None
                 )
             ) if self.about_me is not None else None

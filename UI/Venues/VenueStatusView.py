@@ -199,7 +199,7 @@ class UpdateVenueButton(Button):
         
     async def callback(self, interaction: Interaction) -> None:
         await interaction.response.defer()
-        await self.view.ctx.update_from_xiv_venue(interaction)
+        await self.view.ctx.update_from_xiv_venue()
         
         await self.view.edit_message_helper(interaction, embed=await self.view.ctx.status())
         

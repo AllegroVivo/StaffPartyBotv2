@@ -20,13 +20,15 @@ class ProfileAAGStatusView(FroggeView):
         super().__init__(user, aag)
 
         button_list = [
-            SetHomeRegionsButton(),
+            SetAccentColorButton(),
+            SetRPJobsButton(),
+            SetCustomURLButton(),
             SetRaceClanButton(),
             SetGenderPronounButton(),
+            SetMareButton(),
             SetOrientationButton(),
             SetHeightButton(),
             SetAgeButton(),
-            SetMareButton(),
             CloseMessageButton()
         ]
         for btn in button_list:
@@ -34,7 +36,64 @@ class ProfileAAGStatusView(FroggeView):
 
         self.set_button_attributes()
 
-################################################################################        
+################################################################################
+class SetAccentColorButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Accent Color",
+            disabled=False,
+            row=0
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx._color)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_color(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
+################################################################################
+class SetRPJobsButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="RP Jobs",
+            disabled=False,
+            row=0
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx.jobs)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_jobs(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
+################################################################################
+class SetCustomURLButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Custom URL",
+            disabled=False,
+            row=0
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx.url)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_url(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
+################################################################################
 class SetGenderPronounButton(FroggeButton):
 
     def __init__(self) -> None:
@@ -43,7 +102,7 @@ class SetGenderPronounButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Gender/Pronouns",
             disabled=False,
-            row=0
+            row=1
         )
 
     def set_attributes(self) -> None:
@@ -62,7 +121,7 @@ class SetRaceClanButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Race/Clan",
             disabled=False,
-            row=0
+            row=1
         )
 
     def set_attributes(self) -> None:
@@ -81,7 +140,7 @@ class SetOrientationButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Orientation",
             disabled=False,
-            row=1
+            row=2
         )
 
     def set_attributes(self) -> None:
@@ -100,7 +159,7 @@ class SetHeightButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Height",
             disabled=False,
-            row=1
+            row=2
         )
 
     def set_attributes(self) -> None:
@@ -119,7 +178,7 @@ class SetAgeButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Age",
             disabled=False,
-            row=1
+            row=2
         )
 
     def set_attributes(self) -> None:
@@ -148,23 +207,4 @@ class SetMareButton(FroggeButton):
         await self.view.ctx.set_mare(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
 
-################################################################################
-class SetHomeRegionsButton(FroggeButton):
-
-    def __init__(self) -> None:
-
-        super().__init__(
-            style=ButtonStyle.secondary,
-            label="Home Region(s)",
-            disabled=False,
-            row=0
-        )
-
-    def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.data_centers)
-
-    async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_data_centers(interaction)
-        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
-        
 ################################################################################

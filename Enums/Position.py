@@ -1,3 +1,5 @@
+from typing import List
+
 from discord import SelectOption
 
 from ._Enum import FroggeEnum
@@ -31,6 +33,12 @@ class Position(FroggeEnum):
             value=str(self.value),
             description=self.description[:100]
         )
+
+################################################################################
+    @classmethod
+    def limited_select_options(cls) -> List[SelectOption]:
+
+        return [p.select_option for p in cls if p != cls.General_Training]
 
 ################################################################################
     @property

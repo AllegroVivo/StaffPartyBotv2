@@ -90,8 +90,9 @@ class DatabaseLoader:
                 ),
                 jobs_manager=JobsManagerSchema(
                     temporary_jobs=map_schema(TemporaryJobPostingSchema, top_level.temporary_jobs),
-                    permanent_jobs=map_schema(PermanentJobPostingSchema, top_level.permanent_jobs)
-                )
+                    permanent_jobs=map_schema(PermanentJobPostingSchema, top_level.permanent_jobs),
+                    trainee_message=TraineeMessageSchema(post_url=top_level.trainee_message_url),
+                ),
             ).model_dump()
 
 ################################################################################

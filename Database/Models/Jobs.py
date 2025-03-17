@@ -13,9 +13,16 @@ class PermanentJobPostingModel(Base):
 
     top_level_id = Column(Integer, ForeignKey("top_level.id", name="permanent_jobs_top_level_fkey", ondelete="CASCADE"), nullable=False, server_default="1")
     id = Column(Integer, primary_key=True)
+    venue_id = Column(Integer, ForeignKey("venues.id", name="temporary_jobs_venues_fkey", ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, nullable=False)
+    description = Column(String, nullable=False)
+    position_id = Column(Integer, nullable=False)
+    post_url = Column(String, nullable=True)
+    salary = Column(String, nullable=True)
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="permanent_jobs")
+    venue = relationship("VenueModel", back_populates="permanent_jobs")
 
 ################################################################################
 class TemporaryJobPostingModel(Base):

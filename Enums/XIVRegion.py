@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 ################################################################################
 class XIVRegion(FroggeEnum):
 
-    NorthAmerica = 1
+    North_America = 1
     Europe = 2
     Oceana = 3
     Japan = 4
@@ -15,10 +15,7 @@ class XIVRegion(FroggeEnum):
     @property
     def proper_name(self) -> str:
 
-        if self.value == 1:
-            return "North America"
-
-        return self.name
+        return self.name.replace("_",  " ")
 
 ################################################################################
     @property

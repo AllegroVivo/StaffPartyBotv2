@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean, ARRAY
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, String, ARRAY
 from sqlalchemy.orm import relationship
 
 from .Base import Base
@@ -39,6 +39,9 @@ class TopLevelDataModel(Base):
     venue_management_role_id = Column(BigInteger, nullable=True)
     trainee_role_id = Column(BigInteger, nullable=True)
     trainee_hiatus_role_id = Column(BigInteger, nullable=True)
+
+    # Miscellaneous
+    trainee_message_url = Column(String, nullable=True)
 
     # Relationships
     venues = relationship("VenueModel", back_populates="top_level", passive_deletes=True)

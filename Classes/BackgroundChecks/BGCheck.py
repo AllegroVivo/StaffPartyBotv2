@@ -108,6 +108,12 @@ class BGCheck:
 
 ################################################################################
     @property
+    def is_submitted(self) -> bool:
+
+        return self._submitted is not None
+
+################################################################################
+    @property
     def approved(self) -> bool:
 
         return self._approved
@@ -166,7 +172,10 @@ class BGCheck:
                 "of the Staff Party Bus to contact and verify my references.*\n\n"
 
                 "Please note that it is __**OKAY**__ to disagree with the above\n"
-                "statement. If you do, a staff member will contact you shortly.\n"
+                "statement. If you do, a staff member will contact you shortly.\n\n"
+                
+                "If you have never worked in a venue, you must receive training\n"
+                "to become qualified.\n"
                 f"{U.draw_line(extra=36)}"
             ),
             fields=[
@@ -176,7 +185,7 @@ class BGCheck:
                         "\n".join([f"- `{n}`" for n in self.names])
                         if self._names else "`No Names Provided`"
                     ),
-                    inline=True
+                    inline=False
                 ),
                 EmbedField(
                     name="__Previous Venues__",
@@ -290,7 +299,7 @@ class BGCheck:
             self._venues.remove(venue)
 
 ################################################################################
-    async def submit(self, interaction: Interaction, agreed: bool) -> None:
+    async def submit(self, interaction: Interaction, agreed: bool) -> bool:
 
         if not self.names:
             error = U.make_error(
@@ -299,7 +308,7 @@ class BGCheck:
                 solution="Enter your character name(s) and try again."
             )
             await interaction.respond(embed=error, ephemeral=True)
-            return
+            return False
 
         word = "AGREE" if agreed else "DISAGREE"
         prompt = U.make_embed(
@@ -315,7 +324,7 @@ class BGCheck:
         await view.wait()
 
         if not view.complete or view.value is False:
-            return
+            return False
 
         # Setting the post_message property will call update for all of these attributes
         self._agree = agreed
@@ -325,13 +334,19 @@ class BGCheck:
         if agreed:
             description = (
                 "Your background check has been submitted!\n"
-                "You will receive a DM from the bot letting you "
-                "know when you've been approved."
+                "You will receive a DM from the bot letting you\n"
+                "know when you've been approved.\n\n"
+                
+                "You may not select your qualified positions until\n"
+                "your approval is processed."
             )
         else:
             description = (
                 "Your background check has been submitted.\n"
-                "You will be contacted by a staff member shortly."
+                "You will be contacted by a staff member shortly.\n\n"
+
+                "You may not select your qualified positions until\n"
+                "your approval is processed."
             )
 
         confirm = U.make_embed(
@@ -341,6 +356,7 @@ class BGCheck:
         )
 
         await interaction.respond(embed=confirm, ephemeral=True)
+        return True
 
 ################################################################################
     async def approve(self, approved_by: User) -> None:
@@ -358,8 +374,10 @@ class BGCheck:
         confirm = U.make_embed(
             title="Approved",
             description=(
-                "Your background check has been approved!\n"
-                "You now have access to the server."
+                "Your background check has been approved!\n\n"
+                
+                "You now have access to the `Qualified Positions` button on your "
+                "staff profile!"
             )
         )
         try:
@@ -387,7 +405,7 @@ class BGCheck:
                     if self._submitted is not None
                     else "`Not Submitted`"
                 ),
-                inline=True
+                inline=False
             ),
             EmbedField(
                 name="__Approved At__",
@@ -395,7 +413,7 @@ class BGCheck:
                     f"{U.format_dt(self._approved_at, 'F')}\n"
                     f"by {(await self.approved_by).mention}"
                 ) if self._approved_at is not None else "`Not Approved`",
-                inline=True
+                inline=False
             ),
         ])
 

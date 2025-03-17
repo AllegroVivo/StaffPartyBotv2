@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING, Dict, Any, Optional, List, Union
 from discord import User, Embed, EmbedField, Interaction
 
 from Assets import BotEmojis
-from UI.Common import FroggeView, BasicTextModal, FroggeSelectView
+from UI.Common import FroggeView, BasicTextModal, FroggeSelectView, AccentColorModal
 from UI.Profiles import (
     GenderPronounView,
     RaceClanSelectView,
     OrientationSelectView,
-    ProfileAAGStatusView,
+    ProfileAAGStatusView, ProfileJobsModal,
 )
 from .ProfileSection import ProfileSection
 from Enums import Gender, Pronoun, Race, Clan, Orientation, XIVRegion, FroggeEnum
-from Utilities import Utilities as U
+from Utilities import Utilities as U, FroggeColor
 
 if TYPE_CHECKING:
     from Classes import Profile
@@ -36,7 +36,9 @@ class ProfileAtAGlance(ProfileSection):
         "_height",
         "_age",
         "_mare",
-        "_data_centers",
+        "_url",
+        "_color",
+        "_jobs",
     )
 
 ################################################################################
@@ -69,7 +71,14 @@ class ProfileAtAGlance(ProfileSection):
         self._height: Optional[int] = kwargs.get("height")
         self._age: Optional[str] = kwargs.get("age")
         self._mare: Optional[str] = kwargs.get("mare")
-        self._data_centers: List[XIVRegion] = [XIVRegion(dc) for dc in kwargs.get("data_centers", [])]
+        self._url: Optional[str] = kwargs.get("url")
+
+        self._color: Optional[FroggeColor] = (
+            FroggeColor(kwargs.get("color"))
+            if kwargs.get("color")
+            else None
+        )
+        self._jobs: List[str] = kwargs.get("jobs", [])
 
 ################################################################################
     @property
@@ -169,14 +178,38 @@ class ProfileAtAGlance(ProfileSection):
 
 ################################################################################
     @property
-    def data_centers(self) -> List[XIVRegion]:
+    def url(self) -> Optional[str]:
 
-        return self._data_centers
+        return self._url
 
-    @data_centers.setter
-    def data_centers(self, value: List[XIVRegion]) -> None:
+    @url.setter
+    def url(self, value: Optional[str]) -> None:
 
-        self._data_centers = value
+        self._url = value
+        self.update()
+
+################################################################################
+    @property
+    def color(self) -> Optional[FroggeColor]:
+
+        return self._color
+
+    @color.setter
+    def color(self, value: Optional[FroggeColor]) -> None:
+
+        self._color = value
+        self.update()
+
+################################################################################
+    @property
+    def jobs(self) -> List[str]:
+
+        return self._jobs
+
+    @jobs.setter
+    def jobs(self, value: List[str]) -> None:
+
+        self._jobs = value
         self.update()
 
 ################################################################################
@@ -194,7 +227,9 @@ class ProfileAtAGlance(ProfileSection):
             "height": self._height,
             "age": self._age,
             "mare": self._mare,
-            "data_centers": [dc.value for dc in self._data_centers],
+            "url": self._url,
+            "color": self._color.value if self._color else None,
+            "jobs": self._jobs,
         }
 
 ################################################################################
@@ -250,30 +285,32 @@ class ProfileAtAGlance(ProfileSection):
         height_val = self.format_height()
         age_val = self.get_attribute_str(self.age)
         mare_val = self.get_attribute_str(self.mare)
-        dc_val = self.get_attribute_str(self.data_centers)
 
-        fields = [
-            EmbedField("__Home Regions__", dc_val, True),
-            EmbedField("", U.draw_line(extra=30), False),
-            EmbedField("__Race/Clan__", raceclan, True),
-            EmbedField("__Gender/Pronouns__", gp_combined, True),
-            EmbedField("", U.draw_line(extra=30), False),
-            EmbedField("__Orientation__", orientation_val, True),
-            EmbedField("__Mare ID__", mare_val, True),
-            EmbedField("", U.draw_line(extra=30), False),
-            EmbedField("__Height__", height_val, True),
-            EmbedField("__RP Age__", age_val, True),
-        ]
+        url_field = str(self.url) if self.url is not None else "`Not Set`"
+        jobs = "- " + "\n- ".join(self._jobs) if self._jobs else "`Not Set`"
+        color_field = (
+            f"{BotEmojis.ArrowLeft} -- (__{str(self.color).upper()}__)"
+            if self._color is not None
+            else "`Not Set`"
+        )
 
         return U.make_embed(
-            color=self.parent.color,
+            color=self.accent_color,
             title=f"At A Glance Section Details for {self.parent.char_name}",
-            description=(
-                "*All sections, aside from **Home Region(s)** are optional.*\n"
-                "*(Click the corresponding button below to edit each data point.)*\n"
-                f"{U.draw_line(extra=38)}"
-            ),
-            fields=fields,
+            fields=[
+                EmbedField("__Color__", color_field, True),
+                EmbedField("__RP Jobs__", jobs, True),
+                EmbedField("__Custom URL__", url_field, False),
+                EmbedField("", U.draw_line(extra=30), False),
+                EmbedField("__Race/Clan__", raceclan, True),
+                EmbedField("__Gender/Pronouns__", gp_combined, True),
+                EmbedField("", U.draw_line(extra=30), False),
+                EmbedField("__Orientation__", orientation_val, True),
+                EmbedField("__Mare ID__", mare_val, True),
+                EmbedField("", U.draw_line(extra=30), False),
+                EmbedField("__Height__", height_val, True),
+                EmbedField("__RP Age__", age_val, True),
+            ],
             timestamp=False
         )
 
@@ -286,10 +323,6 @@ class ProfileAtAGlance(ProfileSection):
     def _raw_string(self) -> str:
 
         ret = ""
-
-        if self.data_centers:
-            dcs = "/".join([dc.abbreviation for dc in self._data_centers])
-            ret += f"__Home Region(s):__ {dcs}\n"
 
         if self.gender is not None:
             gender = self._gender.proper_name if isinstance(self._gender, Gender) else self._gender
@@ -335,14 +368,24 @@ class ProfileAtAGlance(ProfileSection):
 
 ################################################################################
     def compile(self) -> Any:
+        """Returns the Details/At A Glance data needed to create a profile post.
 
-        if not self._raw_string():
-            return None
+        Tuple returned represents the following:
+        (color, url, jobs, aag)
 
-        return EmbedField(
+        Returns
+        -------
+        Tuple[FroggeColor, Optional[str], Optional[str], Optional[str]]
+        """
+
+        jobs_str = "/".join(self._jobs) if self._jobs else None
+        aag_field = EmbedField(
             name=f"{BotEmojis.Eyes} __At A Glance__ {BotEmojis.Eyes}",
             value=self._raw_string(),
             inline=False
+        )
+        return self.accent_color, self.url, jobs_str, (
+            aag_field if self._raw_string() else None
         )
 
 ################################################################################
@@ -351,13 +394,15 @@ class ProfileAtAGlance(ProfileSection):
         return (
             f"{U.draw_line(extra=15)}\n"
             "__**At A Glance**__\n"
-            f"{self.progress_emoji(self._data_centers)} -- Home Region(s)\n"
+            f"{self.progress_emoji(self._color)} -- Accent Color\n"
+            f"{self.progress_emoji(self._url)} -- Custom URL\n"
+            f"{self.progress_emoji(self._jobs)} -- RP Jobs\n"
             f"{self.progress_emoji(self._gender)} -- Gender / Pronouns\n"
             f"{self.progress_emoji(self._race)} -- Race / Clan\n"
             f"{self.progress_emoji(self._orientation)} -- Orientation\n"
             f"{self.progress_emoji(self._height)} -- Height\n"
             f"{self.progress_emoji(self._age)} -- RP Age\n"
-            f"{self.progress_emoji(self._mare)} -- Friend ID\n"
+            f"{self.progress_emoji(self._mare)} -- Mare ID\n"
         )
 
 ################################################################################
@@ -549,23 +594,61 @@ class ProfileAtAGlance(ProfileSection):
         await self.update_post_components()
 
 ################################################################################
-    async def set_data_centers(self, interaction: Interaction) -> None:
+    async def set_url(self, interaction: Interaction) -> None:
 
-        prompt = U.make_embed(
-            title="Select Your Home Region(s)",
-            description=(
-                "Pick your character's home region(s) from the drop-down below."
-            )
+        modal = BasicTextModal(
+            title="Set Custom URL",
+            attribute="Custom URL",
+            cur_val=self._url,
+            example="eg. 'https://carrd.co/AllegroVivo'",
+            max_length=200,
+            required=False
         )
-        view = FroggeSelectView(interaction.user, XIVRegion.select_options(), multi_select=True)
 
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
 
-        if not view.complete or view.value is False:
+        if not modal.complete:
             return
 
-        self.data_centers = [XIVRegion(int(dc)) for dc in view.value]
+        if not modal.value.startswith("https://"):
+            error = U.make_error(
+                title="Malformed URL",
+                message=f"The URL '{modal.value}' is malformed and could not be accepted.",
+                solution="Please ensure it is of schema '`https://`'."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        self.url = modal.value
+        await self.update_post_components()
+
+################################################################################
+    async def set_color(self, interaction: Interaction) -> None:
+
+        modal = AccentColorModal(self.color)
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.color = modal.value
+        await self.update_post_components()
+
+################################################################################
+    async def set_jobs(self, interaction: Interaction) -> None:
+
+        modal = ProfileJobsModal(self.jobs)
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.jobs = modal.value
         await self.update_post_components()
 
 ################################################################################

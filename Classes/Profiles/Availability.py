@@ -147,7 +147,7 @@ class Availability(Identifiable):
         return "\n".join([
             (
                 f"{a.day.proper_name}: "
-                f"{a.start_timestamp} - {a.end_timestamp}\n"
+                f"{a.start_timestamp} - {a.end_timestamp}"
             ) for a in availability
         ]) if availability else "`No Availability Set`"
 

@@ -77,3 +77,8 @@ class DatabaseUpdater:
         self._update_record(Models.ProfileAdditionalImageModel, ai.to_dict(), id=ai.id)
 
 ################################################################################
+    def permanent_job(self, job: PermanentJobPosting) -> None:
+
+        self._update_record(Models.PermanentJobPostingModel, job.to_dict(), id=job.id)
+
+################################################################################

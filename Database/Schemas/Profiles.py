@@ -45,6 +45,7 @@ class StaffProfileSchema(BaseModel):
     jobs: List[str] = []
     rates: Optional[str]
     position_ids: List[int]
+    training_ids: List[int]
     dm_pref: bool
     timezone: Optional[str]
     availability: List[ProfileAvailabilitySchema] = []
@@ -69,7 +70,9 @@ class StaffProfileSchema(BaseModel):
     additional_images: List[AdditionalImageSchema] = []
     # Other
     muted_venue_ids: List[int]
-    hiatus: bool
+    bg_check_done: bool
+    rp_level: Optional[int]
+    venue_tags: List[str]
 
     class Config:
         from_attributes = True

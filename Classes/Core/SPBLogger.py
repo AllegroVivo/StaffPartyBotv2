@@ -260,3 +260,17 @@ class SPBLogger:
         await self._log(embed)
 
 ################################################################################
+    async def perm_job_posted(self, job: PermanentJobPosting) -> None:
+
+        embed = U.make_embed(
+            title="Permanent Job Posted!",
+            description=(
+                f"New permanent job posting for `{job.position.name}` has "
+                f"been posted by `{job.venue.name}`!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################

@@ -19,17 +19,17 @@ from discord.utils import MISSING
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
 from UI.Profiles import ProfileMainMenuView, ProfileUserMuteView
-from .ProfileDetails import ProfileDetails
+from .ProfileMainInfo import ProfileMainInfo
 from .ProfileAtAGlance import ProfileAtAGlance
 from Utilities import Utilities as U, FroggeColor
 from .ProfilePersonality import ProfilePersonality
 from .ProfileImages import ProfileImages
 from Errors import InsufficientPermissions
-from Enums import Position
+from Enums import Position, XIVRegion
 from UI.Common import CloseMessageView
 
 if TYPE_CHECKING:
-    from Classes import ProfileManager, Venue
+    from Classes import ProfileManager, Venue, BGCheck, Availability
     from UI.Common import FroggeView
 ################################################################################
 
@@ -42,13 +42,13 @@ class Profile(ManagedObject):
 
     __slots__ = (
         "_user",
-        "_details",
+        "_main_info",
         "_aag",
         "_personality",
         "_images",
         "_post_msg",
         "_muted_venue_ids",
-        "_hiatus",
+        "_bg_check",
     )
 
 ################################################################################
@@ -59,9 +59,9 @@ class Profile(ManagedObject):
         self._user: LazyUser = LazyUser(self, kwargs["user_id"])
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
         self._muted_venue_ids: List[int] = kwargs.get("muted_venue_ids", [])
-        self._hiatus: bool = kwargs.get("hiatus", False)
+        self._bg_check: bool = kwargs.get("bg_check_done", False)
 
-        self._details: ProfileDetails = ProfileDetails(self, **kwargs)
+        self._main_info: ProfileMainInfo = ProfileMainInfo(self, **kwargs)
         self._aag: ProfileAtAGlance = ProfileAtAGlance(self, **kwargs)
         self._personality: ProfilePersonality = ProfilePersonality(self, **kwargs)
         self._images: ProfileImages = ProfileImages(self, **kwargs)
@@ -88,19 +88,19 @@ class Profile(ManagedObject):
     @property
     def char_name(self) -> str:
 
-        return self._details.name
+        return self._main_info.name
 
 ################################################################################
     @property
-    def color(self) -> Optional[FroggeColor]:
+    def custom_url(self) -> Optional[str]:
 
-        return self._details.color
+        return self._aag._url
 
 ################################################################################
     @property
-    def details(self) -> ProfileDetails:
+    def details(self) -> ProfileMainInfo:
 
-        return self._details
+        return self._main_info
 
 ################################################################################
     @property
@@ -144,15 +144,27 @@ class Profile(ManagedObject):
 
 ################################################################################
     @property
-    def on_hiatus(self) -> bool:
+    def bg_check(self) -> Optional[BGCheck]:
 
-        return self._hiatus
+        return self.bot.bg_check_manager[self.user_id]
 
-    @on_hiatus.setter
-    def on_hiatus(self, value: bool) -> None:
+################################################################################
+    @property
+    def availability(self) -> List[Availability]:
 
-        self._hiatus = value
-        self.update()
+        return self._main_info.availability
+
+################################################################################
+    @property
+    def desired_trainings(self) -> List[Position]:
+
+        return self._main_info.trainings
+
+################################################################################
+    @property
+    def data_centers(self) -> List[XIVRegion]:
+
+        return self._main_info.regions
 
 ################################################################################
     def update(self) -> None:
@@ -164,7 +176,7 @@ class Profile(ManagedObject):
 
         return {
             "post_url": self.post_url,
-            "hiatus": self._hiatus,
+            "bg_check_done": self._bg_check,
             "muted_venue_ids": self._muted_venue_ids,
         }
 
@@ -178,10 +190,10 @@ class Profile(ManagedObject):
     def is_complete(self) -> bool:
 
         return all([
-            self._aag._data_centers,
-            self._details._positions,
-            self._details._availability,
-            self._details._name,
+            self._main_info._regions,
+            self._main_info._positions,
+            self._main_info._availability,
+            self._main_info._name,
         ])
 
 ################################################################################
@@ -203,8 +215,8 @@ class Profile(ManagedObject):
 ################################################################################
     async def compile(self) -> Tuple[Embed, Embed, Optional[Embed]]:
 
-        char_name, url, color, jobs, rates_field, availability, dm_pref = self._details.compile()
-        ataglance = self._aag.compile()
+        char_name, region_str, availability, dm_pref = self._main_info.compile()
+        color, url, jobs, ataglance = self._aag.compile()
         likes, dislikes, personality, aboutme = self._personality.compile()
         thumbnail, main_image, additional_imgs = self._images.compile()
 
@@ -215,11 +227,17 @@ class Profile(ManagedObject):
 
         if dm_pref:
             dm_text = (
-                f"{U.yes_no_emoji(dm_pref)} **Accepting staffing-oriented DMs** {U.yes_no_emoji(dm_pref)}\n"
+                f"{U.yes_no_emoji(dm_pref)} "
+                f"**Accepting staffing-oriented DMs** "
+                f"{U.yes_no_emoji(dm_pref)}\n"
                 f"({(await self.user).mention})"
             )
         else:
-            dm_text = f"{U.yes_no_emoji(dm_pref)} **Not accepting staffing-oriented DMs** {U.yes_no_emoji(dm_pref)}"
+            dm_text = (
+                f"{U.yes_no_emoji(dm_pref)} "
+                f"**Not accepting staffing-oriented DMs** "
+                f"{U.yes_no_emoji(dm_pref)}"
+            )
 
         description = dm_text
         if jobs:
@@ -228,12 +246,11 @@ class Profile(ManagedObject):
                 f"{jobs}\n"
                 f"{U.draw_line(text=jobs)}\n"
             )
+        description += region_str
 
         fields: List[EmbedField] = []
         if ataglance is not None:
             fields.append(ataglance)
-        if rates_field is not None:
-            fields.append(rates_field)
         if likes is not None:
             fields.append(likes)
         if dislikes is not None:
@@ -259,7 +276,7 @@ class Profile(ManagedObject):
 ################################################################################
     async def main_details_menu(self, interaction: Interaction) -> None:
 
-        await self._details.menu(interaction)
+        await self._main_info.menu(interaction)
 
 ################################################################################
     async def ataglance_menu(self, interaction: Interaction) -> None:
@@ -318,12 +335,12 @@ class Profile(ManagedObject):
 ################################################################################
     async def progress(self , interaction: Interaction) -> None:
 
-        em_final = self._details.progress_emoji(await self.post_message)
+        em_final = self._main_info.progress_emoji(await self.post_message)
         progress = U.make_embed(
-            color=self.color,
+            color=self._aag.accent_color,
             title="Profile Progress",
             description=(
-                self._details.progress() +
+                self._main_info.progress() +
                 self._aag.progress() +
                 self._personality.progress() +
                 self._images.progress() +
@@ -343,7 +360,7 @@ class Profile(ManagedObject):
         # Map each position to its weight, defaulting to a high number if not found
         weighted_positions = [
             (job, U.JOB_WEIGHTS.get(job, 100))
-            for job in self._details.positions
+            for job in self._main_info.positions
         ]
 
         # Sort positions by weight (ascending order so lower numbers are first)
@@ -362,7 +379,7 @@ class Profile(ManagedObject):
             return []
 
         # Tags - Start with DM status
-        tag_text = "Accepting DMs" if self._details.dm_preference else "Not Accepting DMs"
+        tag_text = "Accepting DMs" if self._main_info.dm_preference else "Not Accepting DMs"
         tags = [
             t for t in post_channel.available_tags
             if t.name.lower() == tag_text.lower()
@@ -490,7 +507,7 @@ class Profile(ManagedObject):
 ################################################################################
     async def update_post_components(
         self,
-        update_embeds: bool,
+        update_embeds: bool = False,
         update_view: bool = True,
         _retry: bool = False
     ) -> bool:

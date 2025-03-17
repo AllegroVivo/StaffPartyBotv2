@@ -11,17 +11,18 @@ from discord import (
     Interaction,
     ForumChannel,
     EmbedField,
-    HTTPException
+    HTTPException, SelectOption
 )
 
+from Assets import BotEmojis
 from Classes.Common import Identifiable, LazyUser, LazyMessage
 from Enums import Weekday, Position
-from UI.Jobs import JobPostingPickupView
+from UI.Jobs import JobPostingPickupView, TemporaryJobPostingStatusView
 from Utilities import Utilities as U
+from UI.Common import ConfirmCancelView
 
 if TYPE_CHECKING:
     from Classes import JobPostingManager, Venue, StaffPartyBot
-    from UI.Common import FroggeView
 ################################################################################
 
 __all__ = ("TemporaryJobPosting",)
@@ -165,12 +166,75 @@ class TemporaryJobPosting(Identifiable):
 ################################################################################
     async def status(self) -> Embed:
 
-        pass
+        hours = (self._end - self._start).total_seconds() / 3600
+        time_field_value = f"`{hours:.2f} hours`"
+
+        posting_user = await self.posting_user
+        return U.make_embed(
+            title=f"Job Posting Status",
+            description=(
+                "__**Venue Name:**__\n"
+                f"`{self.venue.name}`\n\n"
+    
+                "__**Venue Contact:**__\n"
+                f"`{posting_user.display_name}`\n"
+                f"({posting_user.mention})\n\n"
+    
+                "__**Venue Address:**\n"
+                f"`{self.venue.location.format()}`\n\n"
+    
+                "__**Job Description:**__\n"
+                f"{U.wrap_text(self._description or '`No Description`', 50)}\n\n"
+    
+                f"{U.draw_line(extra=30)}\n"
+            ),
+            fields=[
+                EmbedField(
+                    name="__Position__",
+                    value=f"`{self._position.proper_name}`",
+                    inline=True
+                ),
+                EmbedField(
+                    name="__Salary__",
+                    value=self._salary,
+                    inline=False
+                ),
+                EmbedField(
+                    name="__Start Time__",
+                    value=(
+                        f"{U.format_dt(self._start, 'F')}\n\n"
+
+                        f"__**End Time**__\n"
+                        f"{U.format_dt(self._end, 'F')}\n"
+                        f"{U.draw_line(extra=12)}"
+                    ),
+                    inline=True
+                ),
+                EmbedField(
+                    name="__Total Time__",
+                    value=time_field_value,
+                    inline=True
+                ),
+                EmbedField(
+                    name="__Posting URL__",
+                    value=(
+                        f"{BotEmojis.ArrowRight}{BotEmojis.ArrowRight}{BotEmojis.ArrowRight} "
+                        f"[Click here to view the posting]({self.post_url}) "
+                        f"{BotEmojis.ArrowLeft}{BotEmojis.ArrowLeft}{BotEmojis.ArrowLeft}"
+                    ) if self.post_url is not None else "`Not Posted`",
+                    inline=False
+                ),
+            ],
+        )
 
 ################################################################################
-    def get_menu_view(self, user: User) -> FroggeView:
+    async def menu(self, interaction: Interaction) -> None:
 
-        pass
+        embed = await self.status()
+        view = TemporaryJobPostingStatusView(interaction.user, self)
+
+        await interaction.respond(embed=embed, view=view)
+        await view.wait()
 
 ################################################################################
     async def compile(self) -> Embed:
@@ -192,7 +256,7 @@ class TemporaryJobPosting(Identifiable):
         )
 
         return U.make_embed(
-            title=f"`{self.position.proper_name}` needed at `{self.venue.name}`",
+            title=f"`{self.position.proper_name}` Needed at `{self.venue.name}`",
             description=description,
             fields=[
                 EmbedField(
@@ -217,7 +281,7 @@ class TemporaryJobPosting(Identifiable):
                     inline=True
                 ),
             ],
-            footer_text=f"Posting ID: {self._id}",
+            thumbnail_url=self.venue.urls.logo
         )
 
 ################################################################################
@@ -323,11 +387,6 @@ class TemporaryJobPosting(Identifiable):
         profile = self.bot.profile_manager.get_profile(user.id)
         if self.venue in profile.muted_venues:
             return False
-
-        # Check if on hiatus
-        if compare_hiatus:
-            if profile.on_hiatus:
-                return False
 
         if check_profile:
             profile_post_message = await profile.post_message
@@ -473,12 +532,46 @@ class TemporaryJobPosting(Identifiable):
                 continue
 
 ################################################################################
-    def format(self) -> str:
+    def format(self, _name_override: Optional[str] = None, v_name: bool = True) -> str:
 
         return (
-            f"**{self.position.proper_name}** at {self.venue.name}\n"
+            f"**{_name_override or self.position.proper_name}** " +
+            (f"at {self.venue.name}\n" if v_name else "\n") +
             f"**Start:** {U.format_dt(self._start, 'F')}\n"
             f"**End:** {U.format_dt(self._end, 'F')}\n"
         )
+
+################################################################################
+    def select_option(self) -> SelectOption:
+
+        hours = round((self._start - datetime.now(UTC)).total_seconds() / 3600)
+        days_str = f"{hours // 24} Days and " if hours >= 24 else ""
+
+        return SelectOption(
+            label=f"{self.position.proper_name}",
+            value=str(self.id),
+            description=f"Occurring in {days_str}{hours} Hours",
+        )
+
+################################################################################
+    async def remove(self, interaction: Interaction) -> None:
+
+        prompt = U.make_embed(
+            title="Remove Job Posting",
+            description=(
+                "Are you sure you want to remove this job posting?\n\n"
+                
+                f"{self.format(None, False)}"
+            )
+        )
+        view = ConfirmCancelView(interaction.user)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        await self.delete()
 
 ################################################################################

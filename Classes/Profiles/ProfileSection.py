@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Optional, Dict
 from discord import Embed, Interaction, User
 
 from Assets import BotEmojis
+from Utilities import FroggeColor
 
 if TYPE_CHECKING:
     from Classes import Profile, StaffPartyBot
@@ -49,6 +50,18 @@ class ProfileSection(ABC):
     def user_id(self) -> int:
 
         return self._parent.user_id
+
+################################################################################
+    @property
+    def custom_url(self) -> Optional[str]:
+
+        return self._parent.custom_url
+
+################################################################################
+    @property
+    def accent_color(self) -> FroggeColor:
+
+        return self._parent._aag._color or FroggeColor.embed_background()
 
 ################################################################################
     @staticmethod

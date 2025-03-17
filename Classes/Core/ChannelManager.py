@@ -170,13 +170,6 @@ class ChannelManager:
                     value=_mention(perm_jobs_channel),
                     inline=False
                 ),
-                EmbedField(
-                    name="__Bot Restart Notification Channels__",
-                    value=(
-                        "\n".join(channel.mention for channel in restart_notifications)
-                    ) if restart_notifications else "`Not Set`",
-                    inline=False
-                ),
             ]
         )
 
@@ -205,8 +198,6 @@ class ChannelManager:
                 return self._profiles
             case ChannelPurpose.Welcome:
                 return self._welcome
-            case ChannelPurpose.BotNotify:
-                return self._restart_notifs  # type: ignore
             case _:
                 raise ValueError(f"Invalid channel purpose: {purpose}")
 
@@ -243,10 +234,6 @@ class ChannelManager:
             case ChannelPurpose.Welcome:
                 assert isinstance(channel, TextChannel)
                 self._welcome.set(channel)
-            case ChannelPurpose.BotNotify:
-                assert isinstance(channel, TextChannel)
-                self._restart_notifs.append(LazyChannel(self, channel.id))
-                self.update()
             case _:
                 raise ValueError(f"Invalid ChannelPurpose: {_type}")
 
@@ -255,5 +242,11 @@ class ChannelManager:
             description=f"The {_type.proper_name} has been set to {channel.mention}!"
         )
         await interaction.respond(embed=embed, ephemeral=True)
+
+################################################################################
+    async def post_trainee_message(self, interaction: Interaction) -> None:
+        """Go on, ask Alyah why this is here."""
+
+        await self.bot.jobs_manager._trainee_msg.post(interaction)
 
 ################################################################################

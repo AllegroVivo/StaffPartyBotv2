@@ -65,5 +65,6 @@ class VenueModel(Base):
     top_level = relationship("TopLevelDataModel", back_populates="venues")
     schedules = relationship("VenueScheduleModel", back_populates="venue", passive_deletes=True)
     temporary_jobs = relationship("TemporaryJobPostingModel", back_populates="venue", passive_deletes=True)
+    permanent_jobs = relationship("PermanentJobPostingModel", back_populates="venue", passive_deletes=True)
 
 ################################################################################

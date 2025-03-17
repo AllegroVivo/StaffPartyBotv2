@@ -107,10 +107,11 @@ class SubmitAndAgreeButton(FroggeButton):
         )
 
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.submit(interaction, True)
+        result = await self.view.ctx.submit(interaction, True)
 
-        self.view.complete = True
-        await self.view.stop()  # type: ignore
+        if result:
+            self.view.complete = True
+            await self.view.stop()  # type: ignore
 
 ################################################################################
 class SubmitAndRejectButton(FroggeButton):
@@ -126,9 +127,10 @@ class SubmitAndRejectButton(FroggeButton):
         )
 
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.submit(interaction, False)
+        result = await self.view.ctx.submit(interaction, False)
 
-        self.view.complete = True
-        await self.view.stop()  # type: ignore
+        if result:
+            self.view.complete = True
+            await self.view.stop()  # type: ignore
 
 ################################################################################

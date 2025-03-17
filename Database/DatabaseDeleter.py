@@ -80,3 +80,8 @@ class DatabaseDeleter:
         self._delete_record(Models.TemporaryJobPostingModel, job_id)
 
 ################################################################################
+    def permanent_job(self, job_id: int) -> None:
+
+        self._delete_record(Models.PermanentJobPostingModel, job_id)
+
+################################################################################

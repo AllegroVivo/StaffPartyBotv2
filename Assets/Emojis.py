@@ -30,9 +30,11 @@ class BotEmojis:
     Pause = PartialEmoji.from_str("<:Pause:1186526919940902912>")
     Scroll = PartialEmoji.from_str("📜")
     Sleep = PartialEmoji.from_str("💤")
+    Spaceship = PartialEmoji.from_str("🚀")
     Stopwatch = PartialEmoji.from_str("⏱️")
     ThumbsDown = PartialEmoji.from_str("👎")
     ThumbsUp = PartialEmoji.from_str("👍")
+    World = PartialEmoji.from_str("🌐")
 
     Bartender = PartialEmoji.from_str("<a:bartender:1168135253387378748>")
     Dancer = PartialEmoji.from_str("<a:dancer:1168134583158575175>")

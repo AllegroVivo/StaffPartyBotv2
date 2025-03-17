@@ -238,6 +238,6 @@ class GameWorld(FroggeEnum):
                 GameWorld.Zeromus,
             ]
             
-        return [world.select_option() for world in world_list]
+        return [world.select_option for world in world_list]
     
 ################################################################################
