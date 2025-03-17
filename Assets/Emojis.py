@@ -7,6 +7,7 @@ __all__ = ("BotEmojis", )
 class BotEmojis:
     """A class to store the bot's emoji requirements as PartialEmoji objects."""
 
+    AgeRestricted = PartialEmoji.from_str("🔞")
     ArrowDown = PartialEmoji.from_str("⬇️")
     ArrowLeft = PartialEmoji.from_str("⬅️")
     ArrowRight = PartialEmoji.from_str("➡️")

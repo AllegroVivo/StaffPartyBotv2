@@ -77,6 +77,7 @@ class StaffProfileModel(Base):
     bg_check_done = Column(Boolean, nullable=False, server_default="false")
     rp_level = Column(Integer, nullable=True)
     venue_tags = Column(ARRAY(String), nullable=False, server_default="{}")
+    nsfw_pref = Column(Boolean, nullable=False, server_default="false")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="profiles", passive_deletes=True)

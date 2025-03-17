@@ -73,6 +73,7 @@ class StaffProfileSchema(BaseModel):
     bg_check_done: bool
     rp_level: Optional[int]
     venue_tags: List[str]
+    nsfw_pref: bool
 
     class Config:
         from_attributes = True

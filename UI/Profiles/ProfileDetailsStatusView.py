@@ -22,10 +22,13 @@ class ProfileDetailsStatusView(FroggeView):
 
         button_list = [
             NameButton(),
-            SetRegionsButton(),
-            SetAvailabilityButton(),
             PositionsButton(),
             SetTrainingsButton(),
+            SetRegionsButton(),
+            SetRPPrefButton(),
+            SetPreferredTagsButton(),
+            ToggleNSFWButton(),
+            SetAvailabilityButton(),
             ToggleDMPrefButton(),
             CloseMessageButton()
         ]
@@ -54,6 +57,44 @@ class NameButton(FroggeButton):
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
 
 ################################################################################
+class PositionsButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Qualified Positions",
+            disabled=False,
+            row=0
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx.positions)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_positions(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
+################################################################################
+class SetTrainingsButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Desired Trainings",
+            disabled=False,
+            row=0
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx.trainings)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_trainings(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
+################################################################################
 class SetRegionsButton(FroggeButton):
     
     def __init__(self) -> None:
@@ -73,43 +114,67 @@ class SetRegionsButton(FroggeButton):
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
 ################################################################################
-class SetTrainingsButton(FroggeButton):
-    
+class SetRPPrefButton(FroggeButton):
+
     def __init__(self) -> None:
-        
+
         super().__init__(
             style=ButtonStyle.secondary,
-            label="Desired Trainings",
+            label="RP Preference",
             disabled=False,
             row=1
         )
 
     def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.trainings)
-        
+        self.set_style(self.view.ctx.rp_level)
+
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_trainings(interaction)
+        await self.view.ctx.set_rp_level(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
-        
+
 ################################################################################
-class PositionsButton(FroggeButton):
-    
+class SetPreferredTagsButton(FroggeButton):
+
     def __init__(self) -> None:
-        
+
         super().__init__(
             style=ButtonStyle.secondary,
-            label="Qualified Positions",
+            label="Preferred Tags",
             disabled=False,
             row=1
         )
 
     def set_attributes(self) -> None:
-        self.set_style(self.view.ctx.positions)
-        
+        self.set_style(self.view.ctx.preferred_tags)
+
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.ctx.set_positions(interaction)
+        await self.view.ctx.set_tags(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
-        
+
+################################################################################
+class ToggleNSFWButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            disabled=False,
+            row=1
+        )
+
+    def set_attributes(self) -> None:
+        if self.view.ctx.nsfw_preference:
+            self.style = ButtonStyle.success
+            self.label = "NSFW Is Okay"
+            self.emoji = BotEmojis.ThumbsUp
+        else:
+            self.style = ButtonStyle.secondary
+            self.label = "No NSFW Please"
+            self.emoji = BotEmojis.AgeRestricted
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.toggle_nsfw(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
 ################################################################################
 class SetAvailabilityButton(FroggeButton):
     
@@ -119,7 +184,7 @@ class SetAvailabilityButton(FroggeButton):
             style=ButtonStyle.secondary,
             label="Set Availability",
             disabled=False,
-            row=0
+            row=2
         )
 
     def set_attributes(self) -> None:
@@ -136,7 +201,7 @@ class ToggleDMPrefButton(FroggeButton):
         
         super().__init__(
             disabled=False,
-            row=1
+            row=2
         )
 
     def set_attributes(self) -> None:

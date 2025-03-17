@@ -394,8 +394,8 @@ class TemporaryJobPosting(Identifiable):
                 return False
 
         # Check if job's data center is in the user's data centers list
-        if compare_data_centers and len(profile.ataglance.data_centers) > 0:
-            if not any(dc.contains(self.venue.location.data_center) for dc in profile.ataglance.data_centers):
+        if compare_data_centers and len(profile.data_centers) > 0:
+            if not any(dc.contains(self.venue.location.data_center) for dc in profile.data_centers):
                 return False
 
         # If comparing schedules, check if the user is available during the job's times

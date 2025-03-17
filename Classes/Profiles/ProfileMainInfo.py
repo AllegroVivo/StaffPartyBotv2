@@ -34,6 +34,7 @@ class ProfileMainInfo(ProfileSection):
         "_trainings",
         "_rp_level",
         "_tags",
+        "_nsfw_pref",
     )
 
 ################################################################################
@@ -69,7 +70,8 @@ class ProfileMainInfo(ProfileSection):
             if kwargs.get("rp_level")
             else None
         )
-        self._tags: List[VenueTag] = [VenueTag(tag) for tag in kwargs.get("venue_tags", [])]
+        self._tags: List[VenueTag] = [VenueTag(int(tag)) for tag in kwargs.get("venue_tags", [])]
+        self._nsfw_pref: bool = kwargs.get("nsfw_pref", False)
 
 ################################################################################
     @property
@@ -169,14 +171,26 @@ class ProfileMainInfo(ProfileSection):
 
 ################################################################################
     @property
-    def preferred_tags(self) -> List[str]:
+    def preferred_tags(self) -> List[VenueTag]:
 
         return self._tags
 
     @preferred_tags.setter
-    def preferred_tags(self, value: List[str]) -> None:
+    def preferred_tags(self, value: List[VenueTag]) -> None:
 
         self._tags = value
+        self.update()
+
+################################################################################
+    @property
+    def nsfw_preference(self) -> bool:
+
+        return self._nsfw_pref
+
+    @nsfw_preference.setter
+    def nsfw_preference(self, value: bool) -> None:
+
+        self._nsfw_pref = value
         self.update()
 
 ################################################################################
@@ -190,7 +204,8 @@ class ProfileMainInfo(ProfileSection):
             "timezone": self._tz.key if self._tz else None,
             "data_centers": [region.value for region in self._regions],
             "rp_level": self._rp_level.value if self._rp_level else None,
-            "venue_tags": self._tags,
+            "venue_tags": [tag.value for tag in self._tags],
+            "nsfw_pref": self._nsfw_pref,
         }
 
 ################################################################################
@@ -203,15 +218,6 @@ class ProfileMainInfo(ProfileSection):
                 ", ".join(f"`{p.proper_name}`" for p in positions[i:i+3])
                 for i in range(0, len(positions), 3)
             ) if positions else "`Not Set`"
-
-        position_str = get_pos_str(self.positions)
-        training_str = get_pos_str(self.trainings)
-
-        if self.trainings and self._rp_level is not None:
-            training_str += (
-                f"\n**Preferred RP Level:** `{self._rp_level.proper_name}`\n"
-                f"**Desired Tags:** {', '.join([f'`{tag}`' for tag in self._tags])}"
-            )
 
         name = f"`{str(self.name)}`" if self.name is not None else "`Not Set`"
         char_name = f"**Character Name:** {name}"
@@ -226,14 +232,28 @@ class ProfileMainInfo(ProfileSection):
                 "Select a button to add/edit the corresponding profile attribute."
             ),
             fields=[
-                EmbedField("__Qualified Positions__", position_str, True),
-                EmbedField("__Trainings Desired__", training_str, True),
+                EmbedField("__Qualified Positions__", get_pos_str(self.positions), True),
+                EmbedField("__Trainings Desired__", get_pos_str(self.trainings), True),
                 EmbedField(
                     name="__Home Region(s)__",
                     value=", ".join([f"`{r.proper_name}`" for r in self.regions]),
                     inline=False
                 ),
-
+                EmbedField(
+                    name="__RP Preference__",
+                    value=f"`{self._rp_level.proper_name}`" if self._rp_level else "`Not Set`",
+                    inline=True
+                ),
+                EmbedField(
+                    name="__Preferred Venue Tags__",
+                    value=U.split_lines([f"`{t.proper_name}`" for t in self._tags], 30),
+                    inline=True
+                ),
+                EmbedField(
+                    name="__NSFW Preference__",
+                    value=U.yes_no_emoji(self._nsfw_pref),
+                    inline=True
+                ),
                 EmbedField(
                     name="__Availability__",
                     value=Availability.short_availability_status(self._availability),
@@ -445,39 +465,15 @@ class ProfileMainInfo(ProfileSection):
             if not view.complete or view.value is False:
                 return
 
-        prompt = U.make_embed(
-            title="Internship Setup: RP Environment",
-            description=(
-                "Please select the RP environment style you would most like "
-                "to train in."
-            )
-        )
-        view = FroggeSelectView(interaction.user, RPLevel.select_options())
+        if not self._rp_level:
+            result = await self.set_rp_level(interaction)
+            if not result:
+                return
 
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        self.rp_level = RPLevel(int(view.value))
-
-        prompt = U.make_embed(
-            title="Internship Setup: Preferred Venue Tags",
-            description=(
-                "Please select all tags that interest you in terms of a "
-                "venue for your internship.\n\n"
-            )
-        )
-        view = FroggeSelectView(interaction.user, VenueTag.select_options())
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        self.preferred_tags = [VenueTag(int(tag)) for tag in view.value]
+        if not self._tags:
+            result = await self.set_tags(interaction)
+            if not result:
+                return
 
         self.trainings = trainings
         await self.update_post_components()
@@ -634,5 +630,47 @@ class ProfileMainInfo(ProfileSection):
 
         self.regions = [XIVRegion(int(dc)) for dc in view.value]
         await self.update_post_components()
+
+################################################################################
+    async def set_rp_level(self, interaction: Interaction) -> bool:
+
+        prompt = U.make_embed(
+            title="Set RP Preference",
+            description="Please select the RP environment style you would most like to train in."
+        )
+        view = FroggeSelectView(interaction.user, RPLevel.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return False
+
+        self.rp_level = RPLevel(int(view.value))
+        return True
+
+################################################################################
+    async def set_tags(self, interaction: Interaction) -> bool:
+
+        prompt = U.make_embed(
+            title="Set Preferred Venue Tags",
+            description="Please select all tags that interest you in terms of a venue for your internship."
+        )
+        view = FroggeSelectView(interaction.user, VenueTag.select_options(), multi_select=True)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return False
+
+        self.preferred_tags = [VenueTag(int(tag)) for tag in view.value]
+        return True
+
+################################################################################
+    async def toggle_nsfw(self, interaction: Interaction) -> None:
+
+        self.nsfw_preference = not self.nsfw_preference
+        await interaction.edit()
 
 ################################################################################

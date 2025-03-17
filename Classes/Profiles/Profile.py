@@ -25,7 +25,7 @@ from Utilities import Utilities as U, FroggeColor
 from .ProfilePersonality import ProfilePersonality
 from .ProfileImages import ProfileImages
 from Errors import InsufficientPermissions
-from Enums import Position, XIVRegion
+from Enums import Position, XIVRegion, RPLevel, VenueTag
 from UI.Common import CloseMessageView
 
 if TYPE_CHECKING:
@@ -167,6 +167,24 @@ class Profile(ManagedObject):
         return self._main_info.regions
 
 ################################################################################
+    @property
+    def rp_level(self) -> Optional[RPLevel]:
+
+        return self._main_info.rp_level
+
+################################################################################
+    @property
+    def venue_tags(self) -> List[VenueTag]:
+
+        return self._main_info._tags
+
+################################################################################
+    @property
+    def nsfw_preference(self) -> bool:
+
+        return self._main_info.nsfw_preference
+
+################################################################################
     def update(self) -> None:
 
         self.bot.db.update.profile(self)
@@ -194,6 +212,8 @@ class Profile(ManagedObject):
             self._main_info._positions,
             self._main_info._availability,
             self._main_info._name,
+            self._main_info._rp_level,
+            self._main_info._tags
         ])
 
 ################################################################################
@@ -417,12 +437,14 @@ class Profile(ManagedObject):
                 title="Profile Incomplete",
                 message="Your profile is incomplete and cannot be posted.",
                 solution=(
-                    "Please ensure that all of the following required fields are "
+                    "Please ensure that all of the Main Information required fields are "
                     "filled out and try again:\n"
-                    "- Name *(Main Info)*\n"
-                    "- Availability *(Main Info)*\n"
-                    "- Employable Positions *(Main Info)*\n"
-                    "- Home Region(s) *(At a Glance)*\n"
+                    "- Name\n"
+                    "- Availability\n"
+                    "- Employable Positions\n"
+                    "- Home Region(s)\n"
+                    "- RP Preference\n"
+                    "- Preferred Venue Tags"
                 )
             )
             await interaction.respond(embed=error, ephemeral=True)

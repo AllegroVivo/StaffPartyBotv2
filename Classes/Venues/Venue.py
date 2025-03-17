@@ -421,6 +421,7 @@ class Venue(ManagedObject):
         self._mare_id: Optional[str] = venue.mare_id
         self._mare_pass: Optional[str] = venue.mare_pass
         self._hiring: bool = venue.hiring
+        self._nsfw = not venue.sfw
 
         self._location.update_from_xiv_venue(venue.location)
         self._urls.update_from_xiv_venue(venue)

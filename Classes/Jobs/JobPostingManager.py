@@ -604,22 +604,113 @@ class JobPostingManager:
 
 ################################################################################
     def _get_trainee_matches(self, venue: Venue, position: Position) -> List[Profile]:
+        """
+        Returns a list of Profiles who want training for the given position,
+        are on the same data center, and have availability covering the venue's schedule.
+        Then also calculates a "compatibility percentage" based on comparing
+        the venue's RP level / tags to each profile's.
+        """
 
-        def matches_hours(avail: Availability, hours: VenueHours):
-            return avail.start_time <= hours.start_time and avail.end_time >= hours.end_time
+        def matches_hours(avail: Availability, hours: VenueHours) -> bool:
+            """
+            Returns True if the profile's availability (avail) covers the entire venue hours (hours),
+            allowing the end time to cross midnight. E.g., 15:00 - 03:00 covers 17:00 - 21:00.
+            """
 
+            # Convert start/end times to "minutes since midnight".
+            # If the end time is earlier or equal to start time, treat it as next-day.
+            def to_minutes_with_wrap(start, end):
+                s = start.hour * 60 + start.minute
+                e = end.hour * 60 + end.minute
+                if e <= s:
+                    e += 1440  # add 24 hours for wrap-around
+                return s, e
+
+            # Convert both availability and venue hours
+            avail_s, avail_e = to_minutes_with_wrap(avail.start_time, avail.end_time)
+            hrs_s, hrs_e = to_minutes_with_wrap(hours.start_time, hours.end_time)
+
+            # Now check if the availability's range [avail_s, avail_e] fully covers
+            # the venue's range [hrs_s, hrs_e].
+            return (avail_s <= hrs_s) and (avail_e >= hrs_e)
+
+        # First, gather all profiles who want training (bot-side logic).
         ret = self.bot.profile_manager.profiles_wanting_training()
+
+        # Filter out profiles that don't match position, data center, or schedule
+        # Note: removing from a list while iterating can be brittle.
+        #       A safer approach is to build a new list with the matches.
+        filtered = []
         for profile in ret:
+            # 1) Must desire 'position'
             if position not in profile.desired_trainings:
-                ret.remove(profile)
+                continue
+            # 2) Must share a data center with the venue
             if not any(dc.contains(venue.location.data_center) for dc in profile.data_centers):
-                ret.remove(profile)
+                continue
+            # 3) Must have availability covering at least one of the venue's scheduled hours
+            #    (or possibly all hours, depending on logic).
             if not any(matches_hours(avail, hours) for avail in profile.availability for hours in venue.schedule):
-                ret.remove(profile)
+                continue
+            # 4) NSFW preference must match venue's NSFW status
+            if venue.nsfw:
+                if not profile.nsfw_preference:
+                    continue
 
-        pct_dict = { profile: 0 for profile in ret }
+            filtered.append(profile)
+
+        # Make 'filtered' the final list
+        ret = filtered
+
+        # Start everyone at 100% compatibility
+        pct_dict = {profile: 100 for profile in ret}
+
+        # Compare RP Level & Tags to reduce or adjust the percentage
         for profile in ret:
+            # 1) Compare RP Level
+            #    Let's assume your RP enum can be cast to an integer or has a .value attribute.
+            #    The bigger the difference in levels, the more we reduce compatibility.
+            #    For example: 0 difference => no penalty, difference of 4 => big penalty.
+            venue_rp_value = venue.rp_level.value  # e.g. integer from 0..4
+            profile_rp_value = profile.rp_level.value
+            rp_diff = abs(venue_rp_value - profile_rp_value)
 
+            # Simple penalty example: 10% penalty per difference in RP level
+            rp_penalty = 10 * rp_diff
+
+            # 2) Compare Tags
+            #    Suppose we do a simple overlap-based bonus or penalty.
+            #    Example: If the venue has "tags = ['Nightlife','18+','LGBTQ+']"
+            #    and the profile has "['Nightlife','Roleplay','All Ages']",
+            #    then the overlap is 1 out of the venue's 3 tags.
+            venue_tags = set(venue.tags)
+            profile_tags = set(profile.venue_tags)
+            overlap = venue_tags.intersection(profile_tags)
+
+            # Let's say for every missing venue tag, we take a penalty,
+            # or for every matched tag, we do no penalty.
+            # You can do something more complex or a small bonus for each match.
+            # Here, let's do a negative penalty for each mismatch:
+            total_venue_tags = len(venue_tags)
+            matched_tags = len(overlap)
+            missing_count = total_venue_tags - matched_tags
+
+            # For each missing tag, reduce 5% or so
+            tag_penalty = 5 * missing_count
+
+            # Combine the penalties.
+            # Alternatively, you could store them separately or do a more weighted approach.
+            total_penalty = rp_penalty + tag_penalty
+
+            # Apply the penalty to the existing 100% base (clamp at 0 if it goes negative).
+            new_pct = max(0, pct_dict[profile] - total_penalty)
+            pct_dict[profile] = new_pct
+
+        # Debug / check results:
+        for p, pct in pct_dict.items():
+            print(p.char_name, pct)
+
+        return ret
 
 ################################################################################
     async def internship_wizard(self, interaction: Interaction, parent: Venue) -> None:
@@ -639,7 +730,8 @@ class JobPostingManager:
             return
 
         position = Position(int(view.value))
+        matches = self._get_trainee_matches(parent, position)
 
-        await interaction.respond(self._get_trainee_matches(parent, position))
+        await interaction.respond("Matches Complete")
 
 ################################################################################
