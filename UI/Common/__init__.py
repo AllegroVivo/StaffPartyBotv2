@@ -9,6 +9,7 @@ from .FroggeMultiMenuSelect import FroggeMultiMenuSelect
 from .FroggeSelectView import FroggeSelectView
 from .FroggeView import FroggeView
 from .Frogginator import Frogginator
+from .ChannelSelectView import ChannelSelectView
 from .InstructionsInfo import InstructionsInfo
 from .TimeSelectView import TimeSelectView
 ################################################################################

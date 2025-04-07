@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Generator
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Engine
@@ -77,7 +77,7 @@ class Database:
 
 ################################################################################
     @contextmanager
-    def _get_db(self) -> Session:
+    def _get_db(self) -> Generator[Session | Any, Any, None]:
 
         db = self._session()
         try:

@@ -50,6 +50,7 @@ class DatabaseLoader:
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
                 selectinload(TopLevelDataModel.temporary_jobs),
                 selectinload(TopLevelDataModel.permanent_jobs),
+                selectinload(TopLevelDataModel.dj_profiles),
             ).first()
 
             def map_schema(schema: Type[T], objects: List[Any]) -> List[T]:
@@ -93,6 +94,14 @@ class DatabaseLoader:
                     permanent_jobs=map_schema(PermanentJobPostingSchema, top_level.permanent_jobs),
                     trainee_message=TraineeMessageSchema(post_url=top_level.trainee_message_url),
                 ),
+                dj_manager=DJManagerSchema(
+                    profiles=[
+                        DJProfileSchema.model_validate(
+                            prof,
+                            context={"availability": map_schema(DJAvailabilitySchema, prof.availability)}
+                        ) for prof in top_level.dj_profiles
+                    ]
+                )
             ).model_dump()
 
 ################################################################################

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Literal, Tuple
 from zoneinfo import ZoneInfo
 
-from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption
+from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption, User, ChannelType
 
 from Enums import Month, Timezone, Position
 from UI.Common import ConfirmCancelView, FroggeSelectView, BasicTextModal, FroggeMultiMenuSelect, TimeSelectView, \
@@ -603,7 +603,7 @@ class JobPostingManager:
             )
 
 ################################################################################
-    def _get_trainee_matches(self, venue: Venue, position: Position) -> List[Profile]:
+    def _get_trainee_matches(self, venue: Venue, position: Position) -> Dict[Profile, int]:
         """
         Returns a list of Profiles who want training for the given position,
         are on the same data center, and have availability covering the venue's schedule.
@@ -710,7 +710,7 @@ class JobPostingManager:
         for p, pct in pct_dict.items():
             print(p.char_name, pct)
 
-        return ret
+        return pct_dict
 
 ################################################################################
     async def internship_wizard(self, interaction: Interaction, parent: Venue) -> None:
@@ -732,6 +732,82 @@ class JobPostingManager:
         position = Position(int(view.value))
         matches = self._get_trainee_matches(parent, position)
 
-        await interaction.respond("Matches Complete")
+        if not matches:
+            problem = U.make_embed(
+                title="No Matches Found",
+                description=(
+                    "No prospective employee matches were found that fit your "
+                    "internship criteria."
+                )
+            )
+            await interaction.respond(embed=problem, ephemeral=True)
+            return
+
+        prompt = U.make_embed(
+            title="Trainee Matches",
+            description=(
+                "The following potential staff are available for training at your venue.\n\n"
+                
+                "Please select the profiles you would like to message.\n\n"
+                
+                "**NOTE: This will open a new thread with the selected users.**"
+            ),
+            fields=[
+                EmbedField(
+                    name=profile.char_name,
+                    value=f"Compatibility: {pct}%",
+                    inline=True
+                ) for profile, pct in matches.items()
+            ]
+        )
+        options = [
+            SelectOption(
+                label=profile.char_name,
+                value=str(profile.id),
+                description=f"Compatibility: {pct}%",
+            )
+            for profile, pct in matches.items()
+        ]
+        view = FroggeSelectView(interaction.user, options, multi_select=True)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        user_ids = [int(p_id) for p_id in view.value]
+        for user_id in user_ids:
+            user = await self.bot.get_or_fetch_user(user_id)
+            await self._open_thread(interaction, user)
+
+################################################################################
+    async def _open_thread(self, interaction: Interaction, user: User) -> None:
+
+        parent_channel = await self.bot.channel_manager.internship_channel
+        if parent_channel is None:
+            error = U.make_error(
+                title="Channel Missing",
+                message="The parent thread channel for internships is missing.",
+                solution="Please contact a bot administrator."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        post_message = (
+            f"Hello {user.mention},\n\n"
+            
+            f"{interaction.user.mention} is interested in offering you a "
+            f"training position at their venue.\n\n"
+            
+            "Please utilize this thread to further discuss the details of "
+            "your internship!"
+        )
+        thread = await parent_channel.create_thread(
+            name=f"Internship with {user.display_name}",
+            type=ChannelType.private_thread,
+            auto_archive_duration=4320  # 3 days
+        )
+        await thread.send(post_message)
 
 ################################################################################

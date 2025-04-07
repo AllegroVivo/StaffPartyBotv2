@@ -88,7 +88,7 @@ class ProfileImages(ProfileSection):
     def status(self) -> Embed:
 
         return U.make_embed(
-            color=self.parent.color,
+            color=self.parent._aag.color,
             title=f"Image Details for `{self.parent.char_name}`",
             description=(
                 "The buttons below allow you to remove and image attached to your profile\n"

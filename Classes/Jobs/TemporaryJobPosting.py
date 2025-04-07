@@ -11,7 +11,7 @@ from discord import (
     Interaction,
     ForumChannel,
     EmbedField,
-    HTTPException, SelectOption
+    HTTPException, SelectOption, ChannelType, Thread
 )
 
 from Assets import BotEmojis
@@ -374,10 +374,11 @@ class TemporaryJobPosting(Identifiable):
     async def is_user_eligible(
         self,
         user: User,
-        compare_hiatus: bool,
         compare_data_centers: bool,
         compare_schedule: bool,
-        check_profile: bool
+        check_profile: bool,
+        check_nsfw: bool = True,
+        check_tags: bool = False,
     ) -> bool:
 
         # Check user and venue mute lists
@@ -391,6 +392,16 @@ class TemporaryJobPosting(Identifiable):
         if check_profile:
             profile_post_message = await profile.post_message
             if profile_post_message is None:
+                return False
+
+        if check_nsfw:
+            if self.venue.nsfw and not profile.nsfw_preference:
+                return False
+
+        if check_tags:
+            tag_strs = [t.proper_name for t in profile._main_info.preferred_tags]
+            venue_tags = self.venue.tags
+            if not any(tag in venue_tags for tag in tag_strs):
                 return False
 
         # Check if job's data center is in the user's data centers list
@@ -416,10 +427,11 @@ class TemporaryJobPosting(Identifiable):
 
         if not await self.is_user_eligible(
             interaction.user,
-            compare_hiatus=False,
             compare_data_centers=False,
             compare_schedule=False,
-            check_profile=True
+            check_profile=True,
+            check_nsfw=False,
+            check_tags=False
         ):
             error = U.make_error(
                 title="Ineligible for Job",
@@ -437,6 +449,17 @@ class TemporaryJobPosting(Identifiable):
         await self.update_post_components(True)
         await interaction.edit()
 
+        thread = await self._open_thread(interaction)
+        jump_url = thread.jump_url if thread else None
+        if jump_url:
+            final_sentence = (
+                f"[Click here]({jump_url}) to view the thread."
+            )
+        else:
+            final_sentence = (
+                "Unable to create a thread for this job posting."
+            )
+
         notify = U.make_embed(
             title="Job Accepted",
             description=(
@@ -446,7 +469,7 @@ class TemporaryJobPosting(Identifiable):
 
                 f"__**Picked Up By**__\n"
                 f"`{interaction.user.display_name}`\n"
-                f"{interaction.user.mention}\n"
+                f"{final_sentence}"
             )
         )
 
@@ -457,6 +480,38 @@ class TemporaryJobPosting(Identifiable):
             pass
 
         await self.bot.log.temp_job_accepted(self)
+
+################################################################################
+    async def _open_thread(self, interaction: Interaction) -> Optional[Thread]:
+
+        parent_channel = await self.bot.channel_manager.internship_channel
+        if parent_channel is None:
+            error = U.make_error(
+                title="Channel Missing",
+                message="The parent thread channel for internships is missing.",
+                solution="Please contact a bot administrator."
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return None
+
+        poster = await self.posting_user
+        post_message = (
+            f"Hello {interaction.user.mention},\n\n"
+
+            f"{poster.mention} is interested in hiring you for the "
+            f"`{self.position.proper_name}` temporary position at their venue.\n\n"
+
+            "Please utilize this thread to further discuss the details of "
+            "your hiring!"
+        )
+        thread = await parent_channel.create_thread(
+            name=f"Temp Job with {interaction.user.display_name}",
+            type=ChannelType.private_thread,
+            auto_archive_duration=4320  # 3 days
+        )
+        await thread.send(post_message)
+
+        return thread
 
 ################################################################################
     async def cancel(self, interaction: Optional[Interaction] = None) -> None:
@@ -507,10 +562,10 @@ class TemporaryJobPosting(Identifiable):
             profile for profile in self.bot.profile_manager.profiles
             if await self.is_user_eligible(
                 user=await profile.user,
-                compare_hiatus=True,
                 compare_data_centers=True,
                 compare_schedule=True,
-                check_profile=True
+                check_profile=True,
+                check_tags=True
             )
         ]
         if not eligible:

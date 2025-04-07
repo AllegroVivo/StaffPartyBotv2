@@ -7,9 +7,9 @@ class ChannelPurpose(FroggeEnum):
     Profiles = 3
     LogStream = 4
     Welcome = 5
-    BotNotify = 6
-    GroupTraining = 7
-    PermJobs = 8
+    Internship = 6
+    PermJobs = 7
+    DJProfiles = 8
 
 ################################################################################
     @property
@@ -24,11 +24,11 @@ class ChannelPurpose(FroggeEnum):
         elif self.value == 4:
             return "Log Stream"
         elif self.value == 6:
-            return "Bot Restart Notification Channels"
+            return "Internship Channel"
         elif self.value == 7:
-            return "Group Training Channel"
-        elif self.value == 8:
             return "Permanent Jobs Channel"
+        elif self.value == 8:
+            return "DJ Profiles Channel"
         
         return self.name + " Channel"
     

@@ -633,7 +633,7 @@ class Utilities:
             await interaction.respond("*Image could not be cleaned up, sorry!*")
 
         try:
-            await msg.delete()
+            await msg.delete_original_response()
         except NotFound:
             pass
         
@@ -763,6 +763,7 @@ class Utilities:
 
         # Distribute the items across the columns
         for i, item in enumerate(items):
+            item = item.strip()
             if add_markdown:
                 item = f"`{item}`"
             else:

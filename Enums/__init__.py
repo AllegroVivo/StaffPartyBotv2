@@ -1,5 +1,7 @@
 from .ChannelPurpose import ChannelPurpose
 from .VenueTag import VenueTag
+from .MusicGenre import MusicGenre
+from .DJLinkType import DJLinkType
 from .Clan import Clan
 from .DataCenter import DataCenter
 from .GameWorld import GameWorld

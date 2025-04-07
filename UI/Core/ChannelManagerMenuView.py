@@ -27,7 +27,8 @@ class ChannelManagerMenuView(FroggeView):
             UpdateChannelButton(ChannelPurpose.Venues, 0),
             UpdateChannelButton(ChannelPurpose.TempJobs, 1),
             UpdateChannelButton(ChannelPurpose.PermJobs, 1),
-            PostTraineeMessageButton(),
+            UpdateChannelButton(ChannelPurpose.Internship, 1),
+            UpdateChannelButton(ChannelPurpose.DJProfiles, 1),
             CloseMessageButton()
         ]
         for btn in button_list:
@@ -65,19 +66,4 @@ class UpdateChannelButton(FroggeButton):
         await self.view.ctx.set_channel(interaction, self.purpose)
         await self.view.edit_message_helper(interaction, embed=await self.view.ctx.status())
         
-################################################################################
-class PostTraineeMessageButton(FroggeButton):
-
-    def __init__(self):
-
-        super().__init__(
-            style=ButtonStyle.primary,
-            label="Post Trainee Message",
-            disabled=False,
-            row=3
-        )
-
-    async def callback(self, interaction):
-        await self.view.ctx.post_trainee_message(interaction)
-
 ################################################################################

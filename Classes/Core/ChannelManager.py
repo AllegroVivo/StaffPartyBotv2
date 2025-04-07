@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Any, Dict, Optional
 
-from discord import Embed, EmbedField, TextChannel, Interaction, ForumChannel, ChannelType
+from discord import Embed, EmbedField, TextChannel, Interaction, ForumChannel, ChannelType, ComponentType
 
 from Classes.Common import LazyChannel
 from Enums import ChannelPurpose
+from UI.Common import FroggeSelectView, ChannelSelectView
 from UI.Core import ChannelManagerMenuView
 from Utilities import Utilities as U
 
@@ -26,7 +27,8 @@ class ChannelManager:
         "_perm_jobs",
         "_profiles",
         "_welcome",
-        "_restart_notifs",
+        "_internship",
+        "_dj_profiles",
     )
 
 ################################################################################
@@ -40,7 +42,8 @@ class ChannelManager:
         self._perm_jobs: LazyChannel = LazyChannel(self, None)
         self._profiles: LazyChannel = LazyChannel(self, None)
         self._welcome: LazyChannel = LazyChannel(self, None)
-        self._restart_notifs: List[LazyChannel] = []
+        self._internship: LazyChannel = LazyChannel(self, None)
+        self._dj_profiles: LazyChannel = LazyChannel(self, None)
 
 ################################################################################
     def load_all(self, data: Dict[str, Any]) -> None:
@@ -51,11 +54,8 @@ class ChannelManager:
         self._perm_jobs = LazyChannel(self, data.get("perm_jobs_channel_id"))
         self._profiles = LazyChannel(self, data.get("profile_channel_id"))
         self._welcome = LazyChannel(self, data.get("welcome_channel_id"))
-        self._restart_notifs = [
-            LazyChannel(self, channel_id)
-            for channel_id
-            in data.get("restart_channel_ids", [])
-        ]
+        self._internship = LazyChannel(self, data.get("group_training_channel_id"))
+        self._dj_profiles = LazyChannel(self, data.get("bg_check_channel_id"))
 
 ################################################################################
     @property
@@ -100,9 +100,15 @@ class ChannelManager:
 
 ################################################################################
     @property
-    async def restart_notification_channels(self) -> List[TextChannel]:
+    async def internship_channel(self) -> Optional[TextChannel]:
 
-        return [await channel.get() for channel in self._restart_notifs]
+        return await self._internship.get()
+
+################################################################################
+    @property
+    async def dj_profiles_channel(self) -> Optional[TextChannel]:
+
+        return await self._dj_profiles.get()
 
 ################################################################################
     def update(self) -> None:
@@ -119,7 +125,8 @@ class ChannelManager:
             "perm_jobs_channel_id": self._perm_jobs.id,
             "profile_channel_id": self._profiles.id,
             "welcome_channel_id": self._welcome.id,
-            "restart_channel_ids": [channel.id for channel in self._restart_notifs],
+            "group_training_channel_id": self._internship.id,
+            "bg_check_channel_id": self._dj_profiles.id,
         }
 
 ################################################################################
@@ -131,7 +138,8 @@ class ChannelManager:
         temp_job_channel = await self.temp_jobs_channel
         perm_jobs_channel = await self.perm_jobs_channel
         welcome_channel = await self.welcome_channel
-        restart_notifications = await self.restart_notification_channels
+        internship_channel = await self.internship_channel
+        dj_profiles_channel = await self.dj_profiles_channel
 
         def _mention(channel: Optional[TextChannel]) -> str:
             return channel.mention if channel else "`Not Set`"
@@ -170,6 +178,16 @@ class ChannelManager:
                     value=_mention(perm_jobs_channel),
                     inline=False
                 ),
+                EmbedField(
+                    name="__Internship Channel__",
+                    value=_mention(internship_channel),
+                    inline=False
+                ),
+                EmbedField(
+                    name="__DJ Profiles__",
+                    value=_mention(dj_profiles_channel),
+                    inline=False
+                ),
             ]
         )
 
@@ -198,6 +216,10 @@ class ChannelManager:
                 return self._profiles
             case ChannelPurpose.Welcome:
                 return self._welcome
+            case ChannelPurpose.Internship:
+                return self._internship
+            case ChannelPurpose.DJProfiles:
+                return self._dj_profiles
             case _:
                 raise ValueError(f"Invalid channel purpose: {purpose}")
 
@@ -205,15 +227,23 @@ class ChannelManager:
     async def set_channel(self, interaction: Interaction, _type: ChannelPurpose) -> None:
 
         restrictions = [ChannelType.forum] if _type in (
-            ChannelPurpose.Venues, ChannelPurpose.Profiles,
+            ChannelPurpose.Venues, ChannelPurpose.Profiles, ChannelPurpose.DJProfiles,
             ChannelPurpose.TempJobs, ChannelPurpose.PermJobs,
         ) else [ChannelType.text]
 
-        channel = await U.select_channel(
-            interaction, self.bot, _type.proper_name, restrictions=restrictions
+        prompt = U.make_embed(
+            title="Select a Channel",
+            description=f"Please select the channel for {_type.proper_name}."
         )
-        if channel is None:
+        view = ChannelSelectView(interaction.user, restrictions)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
             return
+
+        channel = view.value
 
         match _type:
             case ChannelPurpose.Venues:
@@ -234,6 +264,12 @@ class ChannelManager:
             case ChannelPurpose.Welcome:
                 assert isinstance(channel, TextChannel)
                 self._welcome.set(channel)
+            case ChannelPurpose.Internship:
+                assert isinstance(channel, TextChannel)
+                self._internship.set(channel)
+            case ChannelPurpose.DJProfiles:
+                assert isinstance(channel, ForumChannel)
+                self._dj_profiles.set(channel)
             case _:
                 raise ValueError(f"Invalid ChannelPurpose: {_type}")
 
@@ -242,11 +278,5 @@ class ChannelManager:
             description=f"The {_type.proper_name} has been set to {channel.mention}!"
         )
         await interaction.respond(embed=embed, ephemeral=True)
-
-################################################################################
-    async def post_trainee_message(self, interaction: Interaction) -> None:
-        """Go on, ask Alyah why this is here."""
-
-        await self.bot.jobs_manager._trainee_msg.post(interaction)
 
 ################################################################################

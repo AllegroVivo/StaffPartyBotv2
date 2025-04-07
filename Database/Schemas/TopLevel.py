@@ -6,6 +6,7 @@ from .BGChecks import BGCheckManagerSchema
 from .Jobs import JobsManagerSchema
 from .Profiles import ProfileManagerSchema
 from .Venues import VenueManagerSchema
+from .DJs import DJManagerSchema
 ################################################################################
 
 __all__ = (
@@ -68,6 +69,7 @@ class MasterResponseSchema(BaseModel):
     bg_check_manager: BGCheckManagerSchema
     profile_manager: ProfileManagerSchema
     jobs_manager: JobsManagerSchema
+    dj_manager: DJManagerSchema
 
     class Config:
         from_attributes = True

@@ -95,18 +95,11 @@ class VenueJobSupervisor:
 
         temp_str = "\n".join(temp_job_strs) or "`No jobs posted.`"
 
-        perm_pos_seen = {}  # Tracks how many times we've labeled a given position
+        counts = Counter(j.position.proper_name for j in self.perm_jobs)
         perm_job_strs = []
 
-        for j in self.perm_jobs:
-            pos_name = j.position.proper_name
-            # Increment the count for this position each time we encounter it
-            perm_pos_seen[pos_name] = perm_pos_seen.get(pos_name, 0) + 1
-            # Then build the label like "1x Bartender", "2x Bartender", etc.
-            count = perm_pos_seen[pos_name]
-            job_label = f"{count}x {pos_name}"
-            # Format or store this label however you need
-            perm_job_strs.append(j.format(job_label, False))
+        for position_name, count in counts.items():
+            perm_job_strs.append(f"**{count}x {position_name}**")
 
         perm_str = "\n".join(perm_job_strs) or "`No jobs posted.`"
 

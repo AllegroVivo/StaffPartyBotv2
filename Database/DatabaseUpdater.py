@@ -82,3 +82,8 @@ class DatabaseUpdater:
         self._update_record(Models.PermanentJobPostingModel, job.to_dict(), id=job.id)
 
 ################################################################################
+    def dj_profile(self, dj_profile: DJProfile) -> None:
+
+        self._update_record(Models.DJProfileModel, dj_profile.to_dict(), user_id=dj_profile.id)
+
+################################################################################

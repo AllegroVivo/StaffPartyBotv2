@@ -257,3 +257,46 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating permanent job: {str(e)}")
 
 ################################################################################
+    def dj_profile(self, user_id: int) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_dj = DJProfileModel(user_id=user_id)
+                db.add(new_dj)
+                db.commit()
+                db.refresh(new_dj)
+                return DJProfileSchema.model_validate(new_dj).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating DJ profile: {str(e)}")
+
+################################################################################
+    def dj_availability(
+        self,
+        profile_id: int,
+        day: int,
+        start_hour: int,
+        start_minute: int,
+        end_hour: int,
+        end_minute: int
+    ) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_avail = DJProfileAvailabilityModel(
+                    profile_id=profile_id,
+                    day=day,
+                    start_hour=start_hour,
+                    start_minute=start_minute,
+                    end_hour=end_hour,
+                    end_minute=end_minute
+                )
+                db.add(new_avail)
+                db.commit()
+                db.refresh(new_avail)
+                return DJAvailabilitySchema.model_validate(new_avail).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating dj availability: {str(e)}")
+
+################################################################################

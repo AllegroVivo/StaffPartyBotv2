@@ -85,3 +85,8 @@ class DatabaseDeleter:
         self._delete_record(Models.PermanentJobPostingModel, job_id)
 
 ################################################################################
+    def dj_profile_availability(self, avail_id: int) -> None:
+
+        self._delete_record(Models.DJProfileAvailabilityModel, avail_id)
+
+################################################################################

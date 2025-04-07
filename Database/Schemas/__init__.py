@@ -1,4 +1,5 @@
 from .BGChecks import *
+from .DJs import *
 from .Jobs import *
 from .Profiles import *
 from .TopLevel import *

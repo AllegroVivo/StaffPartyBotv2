@@ -20,6 +20,7 @@ from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
 from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
+from Classes.DJProfiles.DJManager import DJManager
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -42,7 +43,8 @@ class StaffPartyBot(Bot):
         "_bg_check_mgr",
         "_profile_mgr",
         "_jobs_mgr",
-        "_welcome_mgr"
+        "_welcome_mgr",
+        "_dj_mgr",
     )
 
     IMAGE_DUMP = 991902526188302427
@@ -83,6 +85,7 @@ class StaffPartyBot(Bot):
         self._profile_mgr: ProfileManager = ProfileManager(self)
         self._jobs_mgr: JobPostingManager = JobPostingManager(self)
         self._welcome_mgr: WelcomeManager = WelcomeManager(self)
+        self._dj_mgr: DJManager = DJManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -141,6 +144,8 @@ class StaffPartyBot(Bot):
         await self._profile_mgr.load_all(payload["profile_manager"])
         print("Loading jobs...")
         await self._jobs_mgr.load_all(payload["jobs_manager"])
+        print("Loading DJ Profiles...")
+        await self._dj_mgr.load_all(payload["dj_manager"])
 
         print("Finalizing load...")
         await self._finalize_load()
@@ -222,6 +227,12 @@ class StaffPartyBot(Bot):
     def jobs_manager(self) -> JobPostingManager:
 
         return self._jobs_mgr
+
+################################################################################
+    @property
+    def dj_profile_manager(self) -> DJManager:
+
+        return self._dj_mgr
 
 ################################################################################
     async def dump_image(self, image: Attachment) -> str:
