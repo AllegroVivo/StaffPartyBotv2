@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Dict
+from typing import TYPE_CHECKING, Any, Optional, Dict, List
 
 from discord import Interaction, User, Embed, ForumChannel
 
@@ -27,9 +27,21 @@ class DJManager(ObjectManager):
         self._managed = [DJProfile(self, **profile) for profile in payload["profiles"]]
 
 ################################################################################
+    async def finalize_load(self) -> None:
+
+        for profile in self.profiles:
+            await profile.update_post_components()
+
+################################################################################
     def __getitem__(self, user_id: int) -> Optional[DJProfile]:
 
         return next((profile for profile in self._managed if profile.id == int(user_id)), None)
+
+################################################################################
+    @property
+    def profiles(self) -> List[DJProfile]:
+
+        return self._managed
 
 ################################################################################
     @property

@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption, User, ChannelType
 
-from Enums import Month, Timezone, Position
+from Enums import Month, Timezone, Position, XIVRegion, MusicGenre
 from UI.Common import ConfirmCancelView, FroggeSelectView, BasicTextModal, FroggeMultiMenuSelect, TimeSelectView, \
     InstructionsInfo
 from Utilities import Utilities as U
@@ -103,27 +103,44 @@ class JobPostingManager:
             return
 
         prompt = U.make_embed(
-            title="Temporary Job Posting",
-            description=(
-                "Please select the jobs you want to create (a) temporary\n"
-                "job posting(s) for.\n\n"
-                
-                "You may select multiple positions at once, but they will\n"
-                "share the same details (salary, start/end dates, etc.)."
-            )
+            title="Do You Need a DJ?",
+            description="Are you posting a temporary job opening for a DJ?"
         )
-        view = FroggeSelectView(interaction.user, Position.limited_select_options(), multi_select=True)
+        view = ConfirmCancelView(interaction.user)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
 
-        if not view.complete or view.value is False:
+        if not view.complete:
             return
 
-        positions = [Position(int(pos_id)) for pos_id in view.value]
-        assert positions
-        pos_descriptions = { p: p.description for p in positions }
+        if view.value is True:
+            positions = [Position.DJ]
+        else:
+            prompt = U.make_embed(
+                title="Temporary Job Posting",
+                description=(
+                    "Please select the jobs you want to create (a) temporary\n"
+                    "job posting(s) for.\n\n"
+                    
+                    "You may select multiple positions at once, but they will\n"
+                    "share the same details (salary, start/end dates, etc.)."
+                )
+            )
+            base_options = Position.limited_select_options()
+            options = [o for o in base_options if o != Position.DJ]
+            view = FroggeSelectView(interaction.user, options, multi_select=True)
 
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if not view.complete or view.value is False:
+                return
+
+            positions = [Position(int(pos_id)) for pos_id in view.value]
+            assert positions
+
+        pos_descriptions = { p: p.description for p in positions }
         prompt = U.make_embed(
             title="Job Description(s)",
             description=(
@@ -197,42 +214,50 @@ class JobPostingManager:
                 description, inter = modal.value
                 pos_descriptions[pos] = description
 
-        prompt = U.make_embed(
-            title="Job Salary",
-            description=(
-                "Next you will need to enter the salary for this/these "
-                "job posting(s)."
-            )
+        # prompt = U.make_embed(
+        #     title="Job Salary",
+        #     description=(
+        #         "Next you will need to enter the salary for this/these "
+        #         "job posting(s)."
+        #     )
+        # )
+        # view = ConfirmCancelView(interaction.user, return_interaction=True)
+        #
+        # await inter.respond(embed=prompt, view=view)
+        # await view.wait()
+        #
+        # if not view.complete or view.value is False:
+        #     return
+        #
+        # _, inter = view.value
+
+        # modal = BasicTextModal(
+        #     title="Job Posting Salary",
+        #     attribute="Salary",
+        #     max_length=50,
+        #     return_interaction=True
+        # )
+        #
+        # await inter.response.send_modal(modal)
+        # await modal.wait()
+        #
+        # if not modal.complete:
+        #     return
+        #
+        # salary, inter = modal.value
+        salary = "12456789"
+
+        # start_result = await self._collect_datetime(inter, "Start")
+        # if start_result is None:
+        #     return
+        # start_dt, tz = start_result
+        start_dt = datetime(
+            year=2025,
+            month=4,
+            day=14,
+            hour=21,
+            tzinfo=ZoneInfo("UTC")
         )
-        view = ConfirmCancelView(interaction.user, return_interaction=True)
-
-        await inter.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        _, inter = view.value
-
-        modal = BasicTextModal(
-            title="Job Posting Salary",
-            attribute="Salary",
-            max_length=50,
-            return_interaction=True
-        )
-
-        await inter.response.send_modal(modal)
-        await modal.wait()
-
-        if not modal.complete:
-            return
-
-        salary, inter = modal.value
-
-        start_result = await self._collect_datetime(inter, "Start")
-        if start_result is None:
-            return
-        start_dt, tz = start_result
 
         options = []
         for total_minutes in range(30, 361, 30):
@@ -249,22 +274,43 @@ class JobPostingManager:
 
             options.append(SelectOption(label=label, value=str(total_minutes)))
 
-        prompt = U.make_embed(
-            title="Job Posting Length",
-            description="How long will this job posting last?"
-        )
-        view = FroggeSelectView(interaction.user, options)
+        # prompt = U.make_embed(
+        #     title="Job Posting Length",
+        #     description="How long will this job posting last?"
+        # )
+        # view = FroggeSelectView(interaction.user, options)
+        #
+        # await inter.respond(embed=prompt, view=view)
+        # await view.wait()
 
-        await inter.respond(embed=prompt, view=view)
-        await view.wait()
+        # if not view.complete or view.value is False:
+        #     return
 
-        if not view.complete or view.value is False:
-            return
+        # end_dt = start_dt + timedelta(minutes=int(view.value))
+        end_dt = start_dt + timedelta(minutes=120)
 
-        end_dt = start_dt + timedelta(minutes=int(view.value))
+        genres = None
+        if Position.DJ in positions:
+            prompt = U.make_embed(
+                title="DJ Genre",
+                description=(
+                    "Please select the genre of music you would like your DJ to play."
+                )
+            )
+            view = FroggeSelectView(interaction.user, MusicGenre.select_options(), multi_select=True)
+
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if not view.complete or view.value is False:
+                return
+
+            genres = [MusicGenre(int(g)) for g in view.value]
 
         for pos, descr in pos_descriptions.items():
-            new_job = TemporaryJobPosting.new(self, v, interaction.user, pos, descr, salary, start_dt, end_dt)
+            new_job = TemporaryJobPosting.new(
+                self, v, interaction.user, pos, descr, salary, start_dt, end_dt, genres
+            )
             self._temporary.append(new_job)
 
             await new_job.create_post(inter)

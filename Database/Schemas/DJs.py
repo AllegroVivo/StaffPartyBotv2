@@ -39,6 +39,7 @@ class DJProfileSchema(BaseModel):
     regions: List[int] = []
     links: List[str] = []
     availability: List[DJAvailabilitySchema] = []
+    muted_venue_ids: List[int] = []
 
     class Config:
         from_attributes = True

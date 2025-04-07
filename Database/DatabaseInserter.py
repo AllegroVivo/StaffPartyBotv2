@@ -207,7 +207,8 @@ class DatabaseInserter:
         description: str,
         salary: str,
         start_dt: datetime,
-        end_dt: datetime
+        end_dt: datetime,
+        genres: List[int]
     ) -> Dict[str, Any]:
 
         with self._parent._get_db() as db:
@@ -219,7 +220,8 @@ class DatabaseInserter:
                     description=description,
                     salary=salary,
                     start_dt=start_dt,
-                    end_dt=end_dt
+                    end_dt=end_dt,
+                    genres=genres
                 )
                 db.add(new_job)
                 db.commit()

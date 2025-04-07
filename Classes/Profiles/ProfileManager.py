@@ -27,6 +27,12 @@ class ProfileManager(ObjectManager):
         self._managed = [Profile(self, **p) for p in payload["profiles"]]
 
 ################################################################################
+    async def finalize_load(self) -> None:
+
+        for profile in self.profiles:
+            await profile.update_post_components()
+
+################################################################################
     @property
     async def post_channel(self) -> Optional[ForumChannel]:
 

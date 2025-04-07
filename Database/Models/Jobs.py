@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean, String, TIMESTAMP
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, ARRAY, String, TIMESTAMP
 from sqlalchemy.orm import relationship
 
 from .Base import Base
@@ -40,6 +40,7 @@ class TemporaryJobPostingModel(Base):
     salary = Column(String, nullable=True)
     start_dt = Column(TIMESTAMP, nullable=False)
     end_dt = Column(TIMESTAMP, nullable=False)
+    genres = Column(ARRAY(Integer), nullable=False, server_default="{}")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="temporary_jobs")

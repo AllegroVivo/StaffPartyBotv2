@@ -21,12 +21,12 @@ class ProfileUserMuteView(View):
         super().__init__(timeout=None)
 
         self.profile: Profile = profile
-        self.add_item(MuteUserButton(self.profile.id))
+        self.add_item(MuteUserButton(self.profile.id, self.profile.user_id))
 
 ################################################################################        
 class MuteUserButton(FroggeButton):
 
-    def __init__(self, _id: int) -> None:
+    def __init__(self, _id: int, user_id: int) -> None:
 
         super().__init__(
             style=ButtonStyle.secondary,
@@ -36,7 +36,9 @@ class MuteUserButton(FroggeButton):
             custom_id=f"mute_user_{_id}"
         )
 
+        self.user_id: int = user_id
+
     async def callback(self, interaction: Interaction) -> None:
-        await self.view.profile.venue_mute(interaction)
+        await interaction.client.venue_manager.mute_user(interaction, self.user_id)  # type: ignore
 
 ################################################################################

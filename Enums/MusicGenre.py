@@ -54,6 +54,6 @@ class MusicGenre(FroggeEnum):
         elif self.value == 23:
             return "Theme Mashup"
 
-        return re.sub(r'([A-Z])', r' \1', self.name)
+        return re.sub(r'([A-Z])', r' \1', self.name).strip()
 
 ################################################################################

@@ -40,7 +40,13 @@ class VenueMuteButton(Button):
     async def callback(self, interaction: Interaction):
         venue: Venue = self.view.venue
         profile = interaction.client.profile_manager.get_profile(interaction.user.id)  # type: ignore
+        dj_profile = interaction.client.dj_profile_manager[interaction.user.id]  # type: ignore
 
-        await profile.mute_venue(interaction, venue)
+        flag = False
+        if profile is not None:
+            await profile.mute_venue(interaction, venue)
+            flag = True
+        if dj_profile is not None:
+            await dj_profile.venue_mute(interaction, venue, flag)
     
 ################################################################################

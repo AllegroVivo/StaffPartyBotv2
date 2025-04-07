@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from ._Enum import FroggeEnum
 
 if TYPE_CHECKING:
@@ -46,5 +46,14 @@ class XIVRegion(FroggeEnum):
             return dc.value in [7]
         else:
             return dc.value in [8, 9, 10, 11]
+
+################################################################################
+    @classmethod
+    def get_region_for_dc(cls, dc: "DataCenter") -> Optional["XIVRegion"]:
+
+        for region in XIVRegion:
+            if region.contains(dc):
+                return region
+        return None
 
 ################################################################################

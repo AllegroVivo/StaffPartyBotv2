@@ -41,6 +41,7 @@ class DJProfileModel(Base):
     dm_pref = Column(Boolean, nullable=False, server_default="true")
     post_url = Column(String, nullable=True)
     regions = Column(ARRAY(Integer), nullable=False, server_default="{}")
+    muted_venue_ids = Column(ARRAY(BigInteger), nullable=False, server_default="{}")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="dj_profiles")

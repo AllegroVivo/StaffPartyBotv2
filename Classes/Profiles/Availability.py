@@ -158,8 +158,23 @@ class Availability(Identifiable):
 
 ################################################################################
     def contains(self, range_start: time, range_end: time) -> bool:
+        """
+        Returns True if [range_start, range_end] is fully contained within
+        [self.start_time, self.end_time], accounting for crossing midnight.
+        """
+        # Convert self's start & end to minutes from midnight
+        s = self.start_time.hour * 60 + self.start_time.minute
+        e = self.end_time.hour * 60 + self.end_time.minute
+        if e <= s:
+            e += 24 * 60  # crosses midnight
 
-        return self.start_time <= range_start and self.end_time >= range_end
+        # Convert the range's start & end similarly
+        rs = range_start.hour * 60 + range_start.minute
+        re = range_end.hour * 60 + range_end.minute
+        if re <= rs:
+            re += 24 * 60  # crosses midnight
+
+        return s <= rs and e >= re
 
 ################################################################################
     @staticmethod

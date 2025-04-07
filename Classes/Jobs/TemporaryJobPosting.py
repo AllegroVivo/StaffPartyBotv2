@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, UTC
 from zoneinfo import ZoneInfo
-from typing import TYPE_CHECKING, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Optional, Type, TypeVar, List
 
 from discord import (
     User,
@@ -16,7 +16,7 @@ from discord import (
 
 from Assets import BotEmojis
 from Classes.Common import Identifiable, LazyUser, LazyMessage
-from Enums import Weekday, Position
+from Enums import Weekday, Position, MusicGenre
 from UI.Jobs import JobPostingPickupView, TemporaryJobPostingStatusView
 from Utilities import Utilities as U
 from UI.Common import ConfirmCancelView
@@ -44,6 +44,7 @@ class TemporaryJobPosting(Identifiable):
         "_post_msg",
         "_candidate",
         "_schedule_updated",
+        "_genres",
     )
 
 ################################################################################
@@ -59,6 +60,11 @@ class TemporaryJobPosting(Identifiable):
 
         self._description: str = kwargs.pop("description")
         self._position: Position = Position(kwargs.pop("position_id"))
+        self._genres: List[MusicGenre] = [
+            MusicGenre(g)
+            for g
+            in kwargs.get("genres", [])
+        ]
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
 
         self._salary: str = kwargs.get("salary")
@@ -78,7 +84,8 @@ class TemporaryJobPosting(Identifiable):
         description: str,
         salary: str,
         start_dt: datetime,
-        end_dt: datetime
+        end_dt: datetime,
+        genres: Optional[List[MusicGenre]] = None
     ) -> JP:
 
         new_data = mgr.bot.db.insert.temporary_job(
@@ -88,7 +95,8 @@ class TemporaryJobPosting(Identifiable):
             description=description,
             salary=salary,
             start_dt=start_dt,
-            end_dt=end_dt
+            end_dt=end_dt,
+            genres=[g.value for g in genres] if genres else []
         )
         return cls(mgr, **new_data)
 
@@ -145,9 +153,21 @@ class TemporaryJobPosting(Identifiable):
 
 ################################################################################
     @property
+    def genres(self) -> List[MusicGenre]:
+
+        return self._genres
+
+################################################################################
+    @property
     def venue(self) -> Venue:
 
         return self.bot.venue_manager[self._venue_id]
+
+################################################################################
+    @property
+    def is_dj_posting(self) -> bool:
+
+        return self.position == Position.DJ
 
 ################################################################################
     async def delete(self) -> None:
@@ -254,33 +274,46 @@ class TemporaryJobPosting(Identifiable):
 
             f"{U.draw_line(extra=30)}\n"
         )
+        fields = [
+            EmbedField(
+                name="__Position__",
+                value=f"`{self.position.proper_name}`",
+                inline=True
+            ),
+            EmbedField(
+                name="__Salary__",
+                value=self._salary,
+                inline=False
+            )
+        ]
+        if self.position == Position.DJ:
+            assert self.genres
+            fields.append(
+                EmbedField(
+                    name="__Desired Genres__",
+                    value=", ".join([f"`{g.proper_name}`" for g in self.genres]),
+                    inline=False
+                )
+            )
+
+        fields.append(
+            EmbedField(
+                name="__Start Time__",
+                value=(
+                    f"{U.format_dt(self._start, 'F')}\n\n"
+
+                    f"__**End Time**__\n"
+                    f"{U.format_dt(self._end, 'F')}\n"
+                    f"{U.draw_line(extra=12)}"
+                ),
+                inline=True
+            )
+        )
 
         return U.make_embed(
             title=f"`{self.position.proper_name}` Needed at `{self.venue.name}`",
             description=description,
-            fields=[
-                EmbedField(
-                    name="__Position__",
-                    value=f"`{self.position.proper_name}`",
-                    inline=True
-                ),
-                EmbedField(
-                    name="__Salary__",
-                    value=self._salary,
-                    inline=False
-                ),
-                EmbedField(
-                    name="__Start Time__",
-                    value=(
-                        f"{U.format_dt(self._start, 'F')}\n\n"
-
-                        f"__**End Time**__\n"
-                        f"{U.format_dt(self._end, 'F')}\n"
-                        f"{U.draw_line(extra=12)}"
-                    ),
-                    inline=True
-                ),
-            ],
+            fields=fields,
             thumbnail_url=self.venue.urls.logo
         )
 
@@ -423,6 +456,80 @@ class TemporaryJobPosting(Identifiable):
         return True
 
 ################################################################################
+    async def is_dj_eligible(
+        self,
+        user: User,
+        compare_data_centers: bool,
+        compare_schedule: bool,
+        check_profile: bool,
+        check_nsfw: bool = True,
+        check_genres: Optional[List[MusicGenre]] = None,
+    ) -> bool:
+
+        # Check user and venue mute lists
+        if user in await self.venue.muted_users:
+            return False
+
+        profile = self.bot.dj_profile_manager.get_profile(user.id)
+        # if self.venue in profile.muted_venues:
+        if self.venue in []:
+            return False
+
+        if check_profile:
+            print("Checking profile")
+            profile_post_message = await profile.post_message
+            if profile_post_message is None:
+                print("Profile post message is None")
+                return False
+            else:
+                print("Profile post message was found")
+
+        if check_nsfw:
+            print("Checking NSFW")
+            if self.venue.nsfw and not profile.nsfw:
+                print("NSFW preference is mismatched")
+                return False
+            else:
+                print("NSFW preference matched")
+
+        if check_genres is not None:
+            print("Checking genres")
+            assert len(check_genres) > 0
+            if not any(genre in profile.genres for genre in check_genres):
+                print("No genres matched")
+                return False
+            else:
+                print("Genres matched")
+
+        # Check if job's data center is in the user's data centers list
+        if compare_data_centers:
+            print("Checking data centers")
+            if not any(r.contains(self.venue.location.data_center) for r in profile.regions):
+                print("No data centers matched")
+                return False
+            else:
+                print("Data centers matched")
+
+        # If comparing schedules, check if the user is available during the job's times
+        if compare_schedule and check_profile:
+            print("Checking schedule")
+            job_day = Weekday(self._start.weekday())
+            for availability in profile.availability:
+                if availability.day == job_day:
+                    start_time, end_time = self._start.time(), self._end.time()
+                    print(start_time, end_time)
+                    if availability.contains(start_time, end_time):
+                        print("Schedule matched")
+                        return True
+                    else:
+                        print(f"{job_day.proper_name} not matched")
+            return False  # If no matching availability was found
+
+        print("Schedule not checked, passing    ")
+        # If not comparing schedules or none of the above conditions matched, the user is eligible
+        return True
+
+################################################################################
     async def candidate_accept(self, interaction: Interaction) -> None:
 
         if not await self.is_user_eligible(
@@ -558,16 +665,29 @@ class TemporaryJobPosting(Identifiable):
 ################################################################################
     async def notify_eligible_applicants(self) -> None:
 
-        eligible = [
-            profile for profile in self.bot.profile_manager.profiles
-            if await self.is_user_eligible(
-                user=await profile.user,
-                compare_data_centers=True,
-                compare_schedule=True,
-                check_profile=True,
-                check_tags=True
-            )
-        ]
+        if self.is_dj_posting:
+            eligible = [
+                profile for profile in self.bot.dj_profile_manager.profiles
+                if await self.is_dj_eligible(
+                    user=await profile.user,
+                    compare_data_centers=True,
+                    compare_schedule=True,
+                    check_profile=True,
+                    check_nsfw=True,
+                    check_genres=self.genres
+                )
+            ]
+        else:
+            eligible = [
+                profile for profile in self.bot.profile_manager.profiles
+                if await self.is_user_eligible(
+                    user=await profile.user,
+                    compare_data_centers=True,
+                    compare_schedule=True,
+                    check_profile=True,
+                    check_tags=True
+                )
+            ]
         if not eligible:
             return
 

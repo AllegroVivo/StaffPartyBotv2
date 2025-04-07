@@ -10,6 +10,7 @@ from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
 from Errors import InsufficientPermissions
 from UI.DJs import DJProfileStatusView
+from UI.Profiles import ProfileUserMuteView
 from .DJAvailability import DJAvailability
 from Enums import MusicGenre, Timezone, Weekday, Hours, XIVRegion
 from Utilities import Utilities as U, FroggeColor
@@ -18,7 +19,7 @@ from .DJLinkManager import DJLinkManager
 from .DJImageManager import DJImageManager
 
 if TYPE_CHECKING:
-    from Classes import DJManager
+    from Classes import DJManager, Venue
     from UI.Common import FroggeView
 ################################################################################
 
@@ -44,6 +45,7 @@ class DJProfile(ManagedObject):
         "_dm_pref",
         "_post_message",
         "_regions",
+        "_muted_venue_ids",
     )
 
 ################################################################################
@@ -76,6 +78,7 @@ class DJProfile(ManagedObject):
         self._dm_pref: bool = kwargs.get("dm_pref", True)
         self._post_message: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
         self._regions: List[XIVRegion] = [XIVRegion(region) for region in kwargs.get("regions", [])]
+        self._muted_venue_ids: List[int] = kwargs.get("muted_venue_ids", [])
 
 ################################################################################
     @classmethod
@@ -239,6 +242,12 @@ class DJProfile(ManagedObject):
         return self._post_message.id
 
 ################################################################################
+    @property
+    def muted_venues(self) -> List[Venue]:
+
+        return [self.bot.venue_manager[vid] for vid in self._muted_venue_ids]
+
+################################################################################
     def update(self) -> None:
 
         self.bot.db.update.dj_profile(self)
@@ -317,15 +326,15 @@ class DJProfile(ManagedObject):
                     value=genres1,
                     inline=True
                 ),
-                EmbedField("** **", genres2, inline=True),
-                EmbedField("** **", genres3, inline=True),
+                EmbedField("** **", genres2 if genres2 != "`No Items`" else "", inline=True),
+                EmbedField("** **", genres3 if genres3 != "`No Items`" else "", inline=True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.GenericLinkIcon} __Links__ {BotEmojis.GenericLinkIcon}",
                     value=links1,
                     inline=True
                 ),
-                EmbedField("** **", links2, True),
+                EmbedField("** **", links2 if links2 != "`No Items`" else "", True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.CalendarLogo} __Availability__ {BotEmojis.CalendarLogo}",
@@ -346,7 +355,7 @@ class DJProfile(ManagedObject):
                 ),
                 EmbedField(
                     name=f"{BotEmojis.Scroll} __About Me__ {BotEmojis.Scroll}",
-                    value=U.string_clamp(self.aboutme, 100) or "`Not set`",
+                    value=U.string_clamp(self.aboutme or "`Not set`", 100),
                     inline=False
                 )
             ],
@@ -889,5 +898,27 @@ class DJProfile(ManagedObject):
             thumbnail_url=BotImages.ThumbsUpFrog,
             timestamp=True
         )
+
+################################################################################
+    async def venue_mute(self, interaction: Interaction, venue: Venue, show_flag: bool) -> None:
+
+        if venue in self.muted_venues:
+            self._muted_venue_ids.remove(venue.id)
+            flag = False
+        else:
+            self._muted_venue_ids.append(venue.id)
+            flag = True
+        self.update()
+
+        if not show_flag:
+            confirm = U.make_embed(
+                title="Venue Mute Toggle",
+                description=(
+                    f"Venue pings for {venue.name} have been "
+                    f"{'enabled' if flag else 'disabled'}.\n\n"
+                    f"{U.draw_line(extra=30)}"
+                )
+            )
+            await interaction.respond(embed=confirm, ephemeral=True)
 
 ################################################################################

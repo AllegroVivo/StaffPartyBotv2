@@ -102,8 +102,7 @@ class Venue(ManagedObject):
 ################################################################################
     async def finalize_load(self) -> None:
 
-        # await self.update_post_components(False)
-        pass
+        await self.update_post_components(False)
 
 ################################################################################
     @property
@@ -658,26 +657,15 @@ class Venue(ManagedObject):
         await self.bot.log.venue_removed(self)
 
 ################################################################################
-    async def toggle_user_mute(self, interaction: Interaction, user: User) -> None:
+    async def toggle_user_mute(self, user_id: int) -> None:
 
-        flag = user in self.muted_users
+        flag = LazyUser(self, user_id) in self._mutes
         if flag:
-            self._mutes = [u for u in self._mutes if u.id != user.id]
+            self._mutes = [u for u in self._mutes if u.id != user_id]
         else:
-            self._mutes.append(LazyUser(self, user.id))
+            self._mutes.append(LazyUser(self, user_id))
 
         self.update()
-
-        description = f"@{user.display_name} has been `{'unmuted' if flag else 'muted'}`."
-        confirm = U.make_embed(
-            title="User Mute Status",
-            description=(
-                f"{user.mention} has been `{'unmuted' if flag else 'muted'}`.\n"
-                f"{U.draw_line(text=description)}"
-            )
-        )
-
-        await interaction.respond(embed=confirm, ephemeral=True)
 
 ################################################################################
     async def continue_import(self, interaction: Interaction) -> None:

@@ -237,7 +237,7 @@ class VenueManager(ObjectManager):
         if not await self.authenticate(venue, interaction.user, interaction):
             return
 
-        await venue.toggle_user_mute(interaction, user)
+        await venue.toggle_user_mute(user.id)
 
 ################################################################################
     async def venue_menu(self, interaction: Interaction) -> None:
@@ -401,5 +401,22 @@ class VenueManager(ObjectManager):
         await self.bot.log.venue_created(venue)
         await venue.post(interaction, True)
         await venue.continue_import(interaction)
+
+################################################################################
+    async def mute_user(self, interaction: Interaction, to_mute: int) -> None:
+
+        venues = self.get_venues_by_user(interaction.user.id)
+        for v in venues:
+            await v.toggle_user_mute(to_mute)
+
+        confirm = U.make_embed(
+            title="User Mute Toggle",
+            description=(
+                f"Job posting pings for all venues managed by you have\n"
+                f"been toggled for this user.\n\n"
+                f"{U.draw_line(extra=25)}"
+            )
+        )
+        await interaction.respond(embed=confirm, ephemeral=True)
 
 ################################################################################

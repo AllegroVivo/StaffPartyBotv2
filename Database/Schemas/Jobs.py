@@ -46,6 +46,7 @@ class TemporaryJobPostingSchema(BaseModel):
     end_dt: Optional[datetime]
     candidate_id: Optional[int]
     post_url: Optional[str]
+    genres: List[int] = []
 
     class Config:
         from_attributes = True
