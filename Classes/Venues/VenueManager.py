@@ -299,7 +299,7 @@ class VenueManager(ObjectManager):
                         flag = True
                         break
 
-                if flag is False:
+                if not flag:
                     await venue.delete()
                     return True
 
@@ -406,17 +406,27 @@ class VenueManager(ObjectManager):
     async def mute_user(self, interaction: Interaction, to_mute: int) -> None:
 
         venues = self.get_venues_by_user(interaction.user.id)
+        venue_dict = {v.name: False for v in venues}
         for v in venues:
-            await v.toggle_user_mute(to_mute)
+            venue_dict[v.name] = await v.toggle_user_mute(to_mute)
+
+        end_str = ""
+        for venue in venue_dict:
+            end_str += f"\n{venue} - `{'Disabled' if venue_dict[venue] else 'Enabled'}`"
 
         confirm = U.make_embed(
             title="User Mute Toggle",
             description=(
-                f"Job posting pings for all venues managed by you have\n"
-                f"been toggled for this user.\n\n"
+                f"{end_str}\n\n"
                 f"{U.draw_line(extra=25)}"
             )
         )
         await interaction.respond(embed=confirm, ephemeral=True)
+
+################################################################################
+    async def update_all_from_xiv(self) -> None:
+
+        for venue in self.venues:
+            await venue.update_from_xiv_venue()
 
 ################################################################################

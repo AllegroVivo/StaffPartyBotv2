@@ -17,6 +17,7 @@ class BotEmojis:
     Check = PartialEmoji.from_str("<:check:958615684869414962>")
     CheckGray = PartialEmoji.from_str("<:CheckGray:1280639747340894278>")
     CheckGreen = PartialEmoji.from_str("<:CheckGreen:1280639745818624052>")
+    Clock = PartialEmoji.from_str("🕑")
     Construction = PartialEmoji.from_str("🚧")
     Cross = PartialEmoji.from_str("❌")
     Cycle = PartialEmoji.from_str("🔄")
@@ -39,6 +40,7 @@ class BotEmojis:
     Stopwatch = PartialEmoji.from_str("⏱️")
     ThumbsDown = PartialEmoji.from_str("👎")
     ThumbsUp = PartialEmoji.from_str("👍")
+    Watch = PartialEmoji.from_str("⌚")
     World = PartialEmoji.from_str("🌐")
 
     # SPB Specific
@@ -53,7 +55,7 @@ class BotEmojis:
     DiscordLogo = PartialEmoji.from_str("<:Discordlogo:1357465744060846121>")
     FacebookLogo = PartialEmoji.from_str("<:Facebooklogo:1357465746745200804>")
     InstagramLogo = PartialEmoji.from_str("<:Instagramlogo:1357465750880653342>")
-    TwitterLogo = PartialEmoji.from_str("<:Xlogo:1357465753896358110>")
+    BlueskyLogo = PartialEmoji.from_str("<:BlueskyLogo:1391917745607671848>")
     YouTubeLogo = PartialEmoji.from_str("<:Youtubelogo:1357465760900972843>")
     TikTokLogo = PartialEmoji.from_str("<:TikToklogo:1357465759059804281>")
     TwitchLogo = PartialEmoji.from_str("<:Twitchlogo:1357465748209139762>")

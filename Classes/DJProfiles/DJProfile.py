@@ -4,7 +4,19 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import TYPE_CHECKING, Type, TypeVar, Optional, List, Dict, Any, Tuple
 
-from discord import User, Embed, EmbedField, Interaction, Thread, Forbidden, Message, ForumTag, HTTPException, NotFound
+from discord import (
+    User,
+    Embed,
+    EmbedField,
+    Interaction,
+    Thread,
+    Forbidden,
+    Message,
+    ForumTag,
+    HTTPException,
+    NotFound
+)
+from discord.utils import MISSING
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
@@ -14,7 +26,7 @@ from UI.Profiles import ProfileUserMuteView
 from .DJAvailability import DJAvailability
 from Enums import MusicGenre, Timezone, Weekday, Hours, XIVRegion
 from Utilities import Utilities as U, FroggeColor
-from UI.Common import AccentColorModal, BasicTextModal, FroggeSelectView, TimeSelectView, ConfirmCancelView
+from UI.Common import AccentColorModal, BasicTextModal, FroggeSelectView, TimeSelectView, ConfirmCancelView, CloseMessageView
 from .DJLinkManager import DJLinkManager
 from .DJImageManager import DJImageManager
 
@@ -92,6 +104,11 @@ class DJProfile(ManagedObject):
     async def user(self) -> User:
 
         return await self._user.get()
+
+    @property
+    def user_id(self) -> int:
+
+        return self._user.id
 
 ################################################################################
     @property
@@ -316,11 +333,18 @@ class DJProfile(ManagedObject):
                     value=U.yes_no_emoji(self._nsfw),
                     inline=True
                 ),
+                EmbedField("", "** **", inline=False), # Spacer
                 EmbedField(
                     name=f"{BotEmojis.FlyingMoney} __Rates__ {BotEmojis.FlyingMoney}",
-                    value=(self.rates or "`Not set`") + f"\n{U.draw_line(extra=15)}",
-                    inline=False
+                    value=self.rates or "`Not set`",
+                    inline=True
                 ),
+                EmbedField(
+                    name="__Timezone__",
+                    value=f"`{self._tz.key if self._tz else 'Not Set'}`",
+                    inline=True
+                ),
+                EmbedField("", U.draw_line(extra=15), inline=False),
                 EmbedField(
                     name=f"{BotEmojis.EarbudLeft} __Genres__ {BotEmojis.EarbudRight}",
                     value=genres1,
@@ -360,6 +384,7 @@ class DJProfile(ManagedObject):
                 )
             ],
             thumbnail_url=self.images.logo,
+            image_url=self.images.banner
         )
 
 ################################################################################
@@ -426,7 +451,8 @@ class DJProfile(ManagedObject):
                     inline=True
                 )
             ],
-            thumbnail_url=self.images.logo
+            thumbnail_url=self.images.logo,
+            image_url=self.images.banner
         )
 
         availability = U.make_embed(
@@ -802,6 +828,7 @@ class DJProfile(ManagedObject):
 
         # Prepare embeds and persistent view
         embeds = [main_profile, availability] + ([aboutme] if aboutme else [])
+        view = ProfileUserMuteView(self)
 
         # Handling threads
         matching_thread = next((t for t in post_channel.threads if t.name.lower() == self.name.lower()), None)
@@ -816,9 +843,11 @@ class DJProfile(ManagedObject):
             # Or create a new thread if no matching one
             action = lambda **kw: post_channel.create_thread(name=self.name, applied_tags=applied_tags, **kw)
 
+        self.bot.add_view(view)
+
         # Post or create thread and handle permissions error
         try:
-            result = await action(embeds=embeds)
+            result = await action(embeds=embeds, view=view)
             if isinstance(result, Thread):
                 self.post_message = await result.fetch_message(result.last_message_id)
             else:
@@ -853,7 +882,14 @@ class DJProfile(ManagedObject):
             return True
 
 ################################################################################
-    async def update_post_components(self, _retry: bool = False) -> bool:
+    async def update_post_components(
+        self,
+        update_embeds: bool = True,
+        update_view: bool = True,
+        _retry: bool = False
+    ) -> bool:
+
+        assert update_embeds or update_view
 
         post_message = await self.post_message
         if post_message is None:
@@ -865,8 +901,16 @@ class DJProfile(ManagedObject):
         main_profile, availability, aboutme = await self.compile()
         embeds = [main_profile, availability] + ([aboutme] if aboutme else [])
 
+        view = MISSING
+        if update_view:
+            view = ProfileUserMuteView(self)
+            self.bot.add_view(view, message_id=post_message.id)
+
         try:
-            await post_message.edit(embeds=embeds)
+            await post_message.edit(
+                embeds=embeds if update_embeds else MISSING,
+                view=view
+            )
         except NotFound:
             self.post_message = None
             return False
@@ -875,7 +919,7 @@ class DJProfile(ManagedObject):
                 print(ex)
                 return False
             await post_message.channel.send("Hey Ur Cute", delete_after=0.1)
-            await self.update_post_components(_retry=True)
+            await self.update_post_components(update_embeds, update_view, _retry=True)
             return False
         else:
             return True
@@ -900,25 +944,46 @@ class DJProfile(ManagedObject):
         )
 
 ################################################################################
-    async def venue_mute(self, interaction: Interaction, venue: Venue, show_flag: bool) -> None:
+    def venue_mute(self, venue: Venue) -> None:
 
-        if venue in self.muted_venues:
-            self._muted_venue_ids.remove(venue.id)
-            flag = False
-        else:
+        already_muted = venue.id in self._muted_venue_ids
+        newly_muted = not already_muted
+        staff_profile = self.bot.profile_manager.get_profile(self.user_id)
+
+        if newly_muted:
             self._muted_venue_ids.append(venue.id)
-            flag = True
-        self.update()
 
-        if not show_flag:
-            confirm = U.make_embed(
-                title="Venue Mute Toggle",
-                description=(
-                    f"Venue pings for {venue.name} have been "
-                    f"{'enabled' if flag else 'disabled'}.\n\n"
-                    f"{U.draw_line(extra=30)}"
+            if staff_profile and venue.id not in staff_profile._muted_venue_ids:
+                staff_profile._muted_venue_ids.append(venue.id)
+                staff_profile.update()
+
+        else:
+            self._muted_venue_ids.remove(venue.id)
+
+            if staff_profile and venue.id in staff_profile._muted_venue_ids:
+                staff_profile._muted_venue_ids.remove(venue.id)
+                staff_profile.update()
+
+        self.update()
+        return newly_muted
+
+################################################################################
+    async def mute_list_report(self, interaction: Interaction) -> None:
+
+        embed = U.make_embed(
+            title=f"Muted Venues Report",
+            description=(
+                (
+                    "\n".join([f"• {u.name}" for u in self.muted_venues])
+                    if self.muted_venues
+                    else "`No muted venues`"
                 )
+                + f"\n{U.draw_line(extra=20)}"
             )
-            await interaction.respond(embed=confirm, ephemeral=True)
+        )
+        view = CloseMessageView(interaction.user)
+
+        await interaction.respond(embed=embed, view=view)
+        await view.wait()
 
 ################################################################################

@@ -234,11 +234,18 @@ class ProfileMainInfo(ProfileSection):
             fields=[
                 EmbedField("__Qualified Positions__", get_pos_str(self.positions), True),
                 EmbedField("__Trainings Desired__", get_pos_str(self.trainings), True),
+                EmbedField("", "** **", False),  # Spacer
                 EmbedField(
                     name="__Home Region(s)__",
                     value=", ".join([f"`{r.proper_name}`" for r in self.regions]),
-                    inline=False
+                    inline=True
                 ),
+                EmbedField(
+                    name="__DM Preference__",
+                    value=U.yes_no_emoji(self._dm_pref),
+                    inline=True
+                ),
+                EmbedField("", "** **", False),  # Spacer
                 EmbedField(
                     name="__RP Preference__",
                     value=f"`{self._rp_level.proper_name}`" if self._rp_level else "`Not Set`",
@@ -260,8 +267,8 @@ class ProfileMainInfo(ProfileSection):
                     inline=True
                 ),
                 EmbedField(
-                    name="__DM Preference__",
-                    value=U.yes_no_emoji(self._dm_pref),
+                    name="__Timezone__",
+                    value=f"`{self._tz.key if self._tz else 'Not Set'}`",
                     inline=True
                 ),
             ]
@@ -383,7 +390,7 @@ class ProfileMainInfo(ProfileSection):
             description="Please select the positions you are qualified to work."
         )
         options = [SelectOption(label="None", value="None", description="This will deactivate all DMs.")]
-        options.extend(Position.limited_select_options())
+        options.extend(Position.limited_select_options([Position.General_Training, Position.DJ]))
         view = FroggeSelectView(interaction.user, options, multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
@@ -415,7 +422,7 @@ class ProfileMainInfo(ProfileSection):
             description="Please select the positions you would like to train in."
         )
         options = [SelectOption(label="None", value="None", description="This will deactivate all DMs.")]
-        options.extend(Position.select_options())
+        options.extend(Position.limited_select_options(exclude=[Position.DJ]))
         view = FroggeSelectView(interaction.user, options, multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
@@ -573,6 +580,15 @@ class ProfileMainInfo(ProfileSection):
             return
 
         end_hour, end_minute = view.value
+
+        if end_hour < start_hour or (end_hour == start_hour and end_minute <= start_minute):
+            error = U.make_error(
+                title="Invalid Time Selection",
+                message="The end time must be after the start time.",
+                solution="Please try again.",
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
 
         # 1) Figure out a date in local time for the chosen weekday
         #    This is optional, but if you want to handle the user picking e.g. "Wednesday"

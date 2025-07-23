@@ -16,7 +16,7 @@ def main():
     for guild_id, data in old_data.items():
         if guild_id != 1104515062187708525:
             continue
-        # new_database_mgr.migrate_positions(data)
+        new_database_mgr.migrate_positions(data)
         new_database_mgr.migrate_profiles(data)
         new_database_mgr.migrate_venues(data)
         new_database_mgr.migrate_bg_checks(data)

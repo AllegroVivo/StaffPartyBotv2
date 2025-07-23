@@ -4,7 +4,8 @@ from discord import Interaction, User
 from discord.ui import Select
 
 from Enums import Hours, Minutes
-from UI.Common import FroggeView, CloseMessageButton
+from UI.Common.FroggeView import FroggeView
+from UI.Common.CloseMessage import CloseMessageButton
 ################################################################################
 
 __all__ = ("TimeSelectView",)

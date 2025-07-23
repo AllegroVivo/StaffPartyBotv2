@@ -24,6 +24,16 @@ class ConfirmCancelView(FroggeView):
         cancel_style: Optional[ButtonStyle] = None,
         **kwargs
     ):
+        """
+        Does not return an interaction when `return_interaction` is True,
+        if the 'cancel' button is pressed.
+
+        (Note that in the `ConfirmCancelView2`, the interaction is returned
+        when either button is pressed and `return_interaction` is True)
+
+        This was done for backwards compatibility with existing code that
+        utilizes the `ConfirmCancelView`.
+        """
 
         self.return_interaction: bool = return_interaction
         super().__init__(owner, None, **kwargs)

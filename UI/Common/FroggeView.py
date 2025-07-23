@@ -13,7 +13,7 @@ class FroggeView(View):
 
     def __init__(
         self,
-        owner: User,
+        owner: Optional[User],
         ctx: Any,
         *args,
         close_on_complete: bool = True,
@@ -22,7 +22,7 @@ class FroggeView(View):
 
         super().__init__(*args, timeout=kwargs.pop("timeout", 1200), **kwargs)
 
-        self.owner: User = owner
+        self.owner: Optional[User] = owner
         self.value: Optional[Any] = None
         self.complete: bool = False
 
@@ -33,6 +33,10 @@ class FroggeView(View):
 
 ################################################################################
     async def interaction_check(self, interaction: Interaction) -> bool:
+
+        if self.owner is None:
+            self._interaction = interaction
+            return True
 
         if interaction.user == self.owner:
             self._interaction = interaction

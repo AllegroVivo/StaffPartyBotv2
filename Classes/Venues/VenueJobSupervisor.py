@@ -156,8 +156,18 @@ class VenueJobSupervisor:
                 position_seen[pos] = position_seen.get(pos, 0) + 1
                 label = f"{pos} {position_seen[pos]}"
 
+            if j.timezone is None:
+                await j.get_tz(interaction)
+            assert j.timezone is not None, (
+                f"Job {j.id} ({j.position.proper_name}) has no timezone set."
+            )
+
             options.append(
-                SelectOption(label=label, value=str(j.id))
+                SelectOption(
+                    label=label,
+                    value=str(j.id),
+                    description=j.start_time.astimezone(j.timezone).strftime("%A, %B %d, %Y %I:%M %p")
+                )
             )
 
         prompt = U.make_embed(
@@ -185,6 +195,22 @@ class VenueJobSupervisor:
 
         job = await self._select_job(interaction, "Temporary", "Modify")
         if job is None:
+            return
+
+        # If the job is already accepted, we can show and error and return.
+        if job.is_accepted:
+            error = U.make_embed(
+                title="Job Already Accepted",
+                description=(
+                    "This job has already been accepted by a candidate.\n\n"
+                    
+                    "If you need to make changes, please cancel the job posting\n"
+                    "and create a new one.\n\n"
+                    
+                    "The candidate will be notified of the cancellation."
+                )
+            )
+            await interaction.respond(embed=error, ephemeral=True)
             return
 
         await job.menu(interaction)

@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Literal, Tuple
 from zoneinfo import ZoneInfo
 
-from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption, User, ChannelType
+from discord import Interaction, ForumChannel, ButtonStyle, EmbedField, SelectOption, User, ChannelType, Member
 
-from Enums import Month, Timezone, Position, XIVRegion, MusicGenre
+from Enums import Month, Timezone, Position, MusicGenre
 from UI.Common import ConfirmCancelView, FroggeSelectView, BasicTextModal, FroggeMultiMenuSelect, TimeSelectView, \
     InstructionsInfo
 from Utilities import Utilities as U
 from .PermanentJobPosting import PermanentJobPosting
 from .TemporaryJobPosting import TemporaryJobPosting
 from .TraineeMessage import TraineeMessage
+from Classes.Common import RevisitTimer
 
 if TYPE_CHECKING:
     from Classes import StaffPartyBot, Venue, Profile, Availability, VenueHours
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 __all__ = ("JobPostingManager", )
 
 ################################################################################
+# noinspection PySimplifyBooleanCheck
 class JobPostingManager:
 
     __slots__ = (
@@ -28,6 +30,7 @@ class JobPostingManager:
         "_temporary",
         "_permanent",
         "_trainee_msg",
+        "_revisits",
     )
 
 ################################################################################
@@ -38,12 +41,18 @@ class JobPostingManager:
         self._temporary: List[TemporaryJobPosting] = []
         self._permanent: List[PermanentJobPosting] = []
         self._trainee_msg: TraineeMessage = TraineeMessage(state)
+        self._revisits: List[RevisitTimer] = []
 
 ################################################################################
     async def load_all(self, payload: Dict[str, Any]) -> None:
 
         self._temporary = [TemporaryJobPosting(self, **p) for p in payload["temporary_jobs"]]
         self._permanent = [PermanentJobPosting(self, **p) for p in payload["permanent_jobs"]]
+
+        for job in self.temporary_postings:
+            await job.update_post_components(False)
+        for job in self.permanent_postings:
+            await job.update_post_components(False)
 
         self._trainee_msg.load(payload["trainee_message"])
 
@@ -106,7 +115,12 @@ class JobPostingManager:
             title="Do You Need a DJ?",
             description="Are you posting a temporary job opening for a DJ?"
         )
-        view = ConfirmCancelView(interaction.user)
+        view = ConfirmCancelView(
+            owner=interaction.user,
+            confirm_text="Yes, I need a DJ",
+            cancel_text="No, I need something else",
+            cancel_style=ButtonStyle.primary
+        )
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -127,7 +141,7 @@ class JobPostingManager:
                     "share the same details (salary, start/end dates, etc.)."
                 )
             )
-            base_options = Position.limited_select_options()
+            base_options = Position.limited_select_options([Position.General_Training, Position.DJ])
             options = [o for o in base_options if o != Position.DJ]
             view = FroggeSelectView(interaction.user, options, multi_select=True)
 
@@ -145,8 +159,18 @@ class JobPostingManager:
             title="Job Description(s)",
             description=(
                 "Would you like to use the default description for this/these\n"
-                "job posting(s), or would you like to provide a custom one?"
-            )
+                "job posting(s), or would you like to provide a custom one?\n\n"
+                
+                "The following are the default descriptions for each position "
+                "you selected."
+            ),
+            fields=[
+                EmbedField(
+                    name=p.proper_name,
+                    value=p.description or "`No description provided.`",
+                    inline=True
+                ) for p in positions
+            ]
         )
         view = ConfirmCancelView(
             owner=interaction.user,
@@ -184,80 +208,128 @@ class JobPostingManager:
                 owner=interaction.user,
                 options=[p.select_option for p in positions],
                 multi_select=True,
-                return_interaction=True
+                return_interaction=True,
+                close_text="Skip"
             )
 
             await interaction.respond(embed=prompt, view=view)
             await view.wait()
 
-            if not view.complete or view.value is False:
+            if not view.complete:
                 return
 
-            pos_ids, inter = view.value
+            if view.value is not False:
+                pos_ids, inter = view.value
+                positions_to_update = [Position(int(i)) for i in pos_ids]
 
-            positions_to_update = [Position(int(i)) for i in pos_ids]
+                count = 1
+                for pos in positions_to_update:
+                    modal = BasicTextModal(
+                        title="Temporary Job Posting",
+                        attribute="Job Description",
+                        max_length=250,
+                        required=False,
+                        return_interaction=True,
+                        instructions=InstructionsInfo(
+                            placeholder="Change your job's description text below.",
+                            value=(
+                                f"Please provide a custom description for your "
+                                f"**{pos.proper_name}** job posting."
+                            )
+                        )
+                    )
 
-            for pos in positions_to_update:
-                modal = BasicTextModal(
-                    title="Temporary Job Posting",
-                    attribute="Job Description",
-                    max_length=250,
-                    return_interaction=True
-                )
+                    await inter.response.send_modal(modal)
+                    await modal.wait()
 
-                await inter.response.send_modal(modal)
-                await modal.wait()
+                    if not modal.complete:
+                        return
 
-                if not modal.complete:
-                    return
+                    if modal.value:
+                        description, inter = modal.value
+                        pos_descriptions[pos] = description
 
-                description, inter = modal.value
-                pos_descriptions[pos] = description
+                    if len(positions_to_update) > 1 and count < len(positions_to_update):
+                        prompt = U.make_embed(
+                            title="Job Description(s)",
+                            description=(
+                                "**Would you like to enter a custom description "
+                                "for one of the other positions?**"
+                            )
+                        )
+                        view = ConfirmCancelView(
+                            owner=inter.user,
+                            return_interaction=True,
+                            confirm_text="Yes",
+                            cancel_text="Done",
+                            cancel_style=ButtonStyle.primary
+                        )
 
-        # prompt = U.make_embed(
-        #     title="Job Salary",
-        #     description=(
-        #         "Next you will need to enter the salary for this/these "
-        #         "job posting(s)."
-        #     )
-        # )
-        # view = ConfirmCancelView(interaction.user, return_interaction=True)
-        #
-        # await inter.respond(embed=prompt, view=view)
-        # await view.wait()
-        #
-        # if not view.complete or view.value is False:
-        #     return
-        #
-        # _, inter = view.value
+                        await inter.respond(embed=prompt, view=view)
+                        await view.wait()
 
-        # modal = BasicTextModal(
-        #     title="Job Posting Salary",
-        #     attribute="Salary",
-        #     max_length=50,
-        #     return_interaction=True
-        # )
-        #
-        # await inter.response.send_modal(modal)
-        # await modal.wait()
-        #
-        # if not modal.complete:
-        #     return
-        #
-        # salary, inter = modal.value
-        salary = "12456789"
+                        if not view.complete:
+                            return
 
-        # start_result = await self._collect_datetime(inter, "Start")
-        # if start_result is None:
-        #     return
-        # start_dt, tz = start_result
-        start_dt = datetime(
-            year=2025,
-            month=4,
-            day=14,
-            hour=21,
-            tzinfo=ZoneInfo("UTC")
+                        if view.value is False:
+                            break
+
+                        _, inter = view.value
+                        count += 1
+
+        prompt = U.make_embed(
+            title="Job Salary",
+            description=(
+                "Next you will need to enter the salary for this/these "
+                "job posting(s).\n\n"
+
+                "**Leave the field blank if you want to skip this step.**"
+            )
         )
+        view = ConfirmCancelView(
+            owner=interaction.user,
+            return_interaction=True,
+            show_cancel=False
+        )
+
+        await inter.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        _, inter = view.value
+
+        modal = BasicTextModal(
+            title="Job Posting Salary",
+            attribute="Salary",
+            max_length=50,
+            return_interaction=True
+        )
+
+        await inter.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        salary, inter = modal.value
+
+        start_result = await self._collect_datetime(inter, "Start")
+        if start_result is None:
+            return
+        start_dt, tz = start_result
+
+        if start_dt < datetime.now(UTC):
+            error = U.make_embed(
+                title="Invalid Start Time",
+                description=(
+                    "The start time for a job posting must be in the future.\n"
+                    "Please try again."
+                )
+            )
+            await inter.respond(embed=error, ephemeral=True)
+            return
 
         options = []
         for total_minutes in range(30, 361, 30):
@@ -274,20 +346,19 @@ class JobPostingManager:
 
             options.append(SelectOption(label=label, value=str(total_minutes)))
 
-        # prompt = U.make_embed(
-        #     title="Job Posting Length",
-        #     description="How long will this job posting last?"
-        # )
-        # view = FroggeSelectView(interaction.user, options)
-        #
-        # await inter.respond(embed=prompt, view=view)
-        # await view.wait()
+        prompt = U.make_embed(
+            title="Job Posting Length",
+            description="How long will this job posting last?"
+        )
+        view = FroggeSelectView(interaction.user, options)
 
-        # if not view.complete or view.value is False:
-        #     return
+        await inter.respond(embed=prompt, view=view)
+        await view.wait()
 
-        # end_dt = start_dt + timedelta(minutes=int(view.value))
-        end_dt = start_dt + timedelta(minutes=120)
+        if not view.complete or view.value is False:
+            return
+
+        end_dt = start_dt + timedelta(minutes=int(view.value))
 
         genres = None
         if Position.DJ in positions:
@@ -309,7 +380,8 @@ class JobPostingManager:
 
         for pos, descr in pos_descriptions.items():
             new_job = TemporaryJobPosting.new(
-                self, v, interaction.user, pos, descr, salary, start_dt, end_dt, genres
+                self, v, interaction.user, pos, descr, salary,
+                start_dt, end_dt, genres, tz
             )
             self._temporary.append(new_job)
 
@@ -323,7 +395,8 @@ class JobPostingManager:
                 f"**Salary:** {salary}\n"
                 f"**Start:** {U.format_dt(start_dt)}\n"
                 f"**End:** {U.format_dt(end_dt)}\n"
-                f"[View Job Posting]({new_job.post_url})"
+                f"[View Job Posting]({new_job.post_url})",
+                ephemeral=True
             )
 
 ################################################################################
@@ -444,24 +517,6 @@ class JobPostingManager:
     async def perm_job_wizard(self, interaction: Interaction, v: Venue) -> None:
 
         prompt = U.make_embed(
-            title="READ ME FIRST!",
-            description=(
-                "Please read the following instructions before proceeding.\n\n"
-
-                "**If you are searching for permanent staff, we encourage you\n"
-                "to visit <#1215371208661667951>, where you can see a list of\n"
-                "trainees suitable for filling your ranks!**"
-            )
-        )
-        view = ConfirmCancelView(interaction.user)
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        prompt = U.make_embed(
             title="Permanent Job Posting",
             description=(
                 "Please select the jobs you want to create (a) permanent\n"
@@ -471,7 +526,11 @@ class JobPostingManager:
                 "share the same salary information."
             )
         )
-        view = FroggeSelectView(interaction.user, Position.limited_select_options(), multi_select=True)
+        view = FroggeSelectView(
+            owner=interaction.user,
+            options=Position.limited_select_options([Position.General_Training, Position.DJ]),
+            multi_select=True
+        )
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -516,51 +575,53 @@ class JobPostingManager:
         inter = interaction
 
         if view.value is True:
-            _describing = True
-            while _describing:
-                prompt = U.make_embed(
-                    title="Job Description(s)",
-                    description=(
-                        "**Please select the job you want to enter a "
-                        "custom description for.**\n\n"
-                    ),
-                    fields=[
-                        EmbedField(
-                            name=p.proper_name,
-                            value=pos_descriptions[p] or "`No description provided.`",
-                            inline=True
-                        ) for p in positions
-                    ]
-                )
-                view = FroggeSelectView(
-                    owner=interaction.user,
-                    options=[p.select_option for p in positions],
-                    return_interaction=True
-                )
+            prompt = U.make_embed(
+                title="Job Description(s)",
+                description=(
+                    "**Please select the job you want to enter a "
+                    "custom description for.**\n\n"
 
-                await inter.respond(embed=prompt, view=view)
-                await view.wait()
+                    "The following are the default descriptions for each position you selected."
+                ),
+                fields=[
+                    EmbedField(
+                        name=p.proper_name,
+                        value=pos_descriptions[p] or "`No description provided.`",
+                        inline=True
+                    ) for p in positions
+                ]
+            )
+            view = FroggeSelectView(
+                owner=interaction.user,
+                options=[p.select_option for p in positions],
+                multi_select=True,
+                return_interaction=True,
+                close_text = "Skip"
+            )
 
-                if not view.complete:
-                    return
+            await inter.respond(embed=prompt, view=view)
+            await view.wait()
 
-                if view.value is False:
-                    break
+            if not view.complete:
+                return
 
+            if view.value is not False:
                 pos_ids, inter = view.value
                 positions_to_update = [Position(int(i)) for i in pos_ids]
 
+                count = 1
                 for pos in positions_to_update:
                     modal = BasicTextModal(
                         title="Permanent Job Posting",
                         attribute="Job Description",
+                        required=False,
                         max_length=500,
                         return_interaction=True,
                         instructions=InstructionsInfo(
                             placeholder="Change your job's description text below.",
                             value=(
                                 f"Please provide a custom description for your "
-                                f"{pos.proper_name} job posting."
+                                f"**{pos.proper_name}** job posting."
                             )
                         )
                     )
@@ -571,34 +632,37 @@ class JobPostingManager:
                     if not modal.complete:
                         return
 
-                    description, inter = modal.value
-                    pos_descriptions[pos] = description
+                    if modal.value:
+                        description, inter = modal.value
+                        pos_descriptions[pos] = description
 
-                    prompt = U.make_embed(
-                        title="Job Description(s)",
-                        description=(
-                            "**Would you like to enter a custom description?"
-                            "for one of the other positions?**"
+                    if len(positions_to_update) > 1 and count < len(positions_to_update):
+                        prompt = U.make_embed(
+                            title="Job Description(s)",
+                            description=(
+                                "**Would you like to enter a custom description "
+                                "for one of the other positions?**"
+                            )
                         )
-                    )
-                    view = ConfirmCancelView(
-                        owner=inter.user,
-                        return_interaction=True,
-                        confirm_text="Yes",
-                        cancel_text="Done",
-                    )
+                        view = ConfirmCancelView(
+                            owner=inter.user,
+                            return_interaction=True,
+                            confirm_text="Yes",
+                            cancel_text="Done",
+                            cancel_style=ButtonStyle.primary
+                        )
 
-                    await inter.respond(embed=prompt, view=view)
-                    await view.wait()
+                        await inter.respond(embed=prompt, view=view)
+                        await view.wait()
 
-                    if not view.complete:
-                        return
+                        if not view.complete:
+                            return
 
-                    if view.value is False:
-                        _describing = False
-                        break
+                        if view.value is False:
+                            break
 
-                    _, inter = view.value
+                        _, inter = view.value
+                        count += 1
 
         prompt = U.make_embed(
             title="Job Salary",
@@ -608,7 +672,7 @@ class JobPostingManager:
                 "**Leave the field blank if you want to skip this step.**"
             )
         )
-        view = ConfirmCancelView(interaction.user, return_interaction=True)
+        view = ConfirmCancelView(interaction.user, return_interaction=True, show_cancel=False)
 
         await inter.respond(embed=prompt, view=view)
         await view.wait()
@@ -631,7 +695,7 @@ class JobPostingManager:
         if not modal.complete:
             return
 
-        salary = modal.value
+        salary = modal.value or None
 
         for pos, descr in pos_descriptions.items():
             new_job = PermanentJobPosting.new(self, v, interaction.user, pos, descr, salary)
@@ -644,8 +708,9 @@ class JobPostingManager:
                 f"**Venue:** {v.name}\n"
                 f"**Position:** {pos.proper_name}\n"
                 f"**Description:** {descr}\n"
-                f"**Salary:** {salary or '`TBD`'}\n"
-                f"[View Job Posting]({new_job.post_url})"
+                f"**Salary:** {salary or '`Not Provided`'}\n"
+                f"[View Job Posting]({new_job.post_url})",
+                ephemeral=True,
             )
 
 ################################################################################
@@ -659,26 +724,26 @@ class JobPostingManager:
 
         def matches_hours(avail: Availability, hours: VenueHours) -> bool:
             """
-            Returns True if the profile's availability (avail) covers the entire venue hours (hours),
-            allowing the end time to cross midnight. E.g., 15:00 - 03:00 covers 17:00 - 21:00.
+            Returns True if at least one hour of availability overlaps with the venue's open hours.
+            Supports crossing midnight (e.g., 15:00–03:00).
             """
 
-            # Convert start/end times to "minutes since midnight".
-            # If the end time is earlier or equal to start time, treat it as next-day.
             def to_minutes_with_wrap(start, end):
                 s = start.hour * 60 + start.minute
                 e = end.hour * 60 + end.minute
                 if e <= s:
-                    e += 1440  # add 24 hours for wrap-around
+                    e += 1440  # Treat end as next day if it wraps past midnight
                 return s, e
 
-            # Convert both availability and venue hours
             avail_s, avail_e = to_minutes_with_wrap(avail.start_time, avail.end_time)
             hrs_s, hrs_e = to_minutes_with_wrap(hours.start_time, hours.end_time)
 
-            # Now check if the availability's range [avail_s, avail_e] fully covers
-            # the venue's range [hrs_s, hrs_e].
-            return (avail_s <= hrs_s) and (avail_e >= hrs_e)
+            # Find overlap in minutes
+            overlap_start = max(avail_s, hrs_s)
+            overlap_end = min(avail_e, hrs_e)
+            overlap_duration = overlap_end - overlap_start
+
+            return overlap_duration >= 60
 
         # First, gather all profiles who want training (bot-side logic).
         ret = self.bot.profile_manager.profiles_wanting_training()
@@ -695,7 +760,6 @@ class JobPostingManager:
             if not any(dc.contains(venue.location.data_center) for dc in profile.data_centers):
                 continue
             # 3) Must have availability covering at least one of the venue's scheduled hours
-            #    (or possibly all hours, depending on logic).
             if not any(matches_hours(avail, hours) for avail in profile.availability for hours in venue.schedule):
                 continue
             # 4) NSFW preference must match venue's NSFW status
@@ -704,6 +768,8 @@ class JobPostingManager:
                     continue
 
             filtered.append(profile)
+            if len(filtered) >= 9: # Limit to 9 profiles for looks
+                break
 
         # Make 'filtered' the final list
         ret = filtered
@@ -767,7 +833,7 @@ class JobPostingManager:
                 "Please select the type of internship you would like to create."
             )
         )
-        view = FroggeSelectView(interaction.user, Position.limited_select_options())
+        view = FroggeSelectView(interaction.user, Position.limited_select_options([Position.DJ]))
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -801,7 +867,10 @@ class JobPostingManager:
             fields=[
                 EmbedField(
                     name=profile.char_name,
-                    value=f"Compatibility: {pct}%",
+                    value=(
+                        f"Match: {pct}%\n"
+                        f"[(View Profile)]({profile.post_url})\n"
+                    ),
                     inline=True
                 ) for profile, pct in matches.items()
             ]
@@ -825,10 +894,10 @@ class JobPostingManager:
         user_ids = [int(p_id) for p_id in view.value]
         for user_id in user_ids:
             user = await self.bot.get_or_fetch_user(user_id)
-            await self._open_thread(interaction, user)
+            await self.initiate_communication(interaction, user, parent)
 
 ################################################################################
-    async def _open_thread(self, interaction: Interaction, user: User) -> None:
+    async def initiate_communication(self, interaction: Interaction, user: User, v: Venue) -> None:
 
         parent_channel = await self.bot.channel_manager.internship_channel
         if parent_channel is None:
@@ -843,8 +912,8 @@ class JobPostingManager:
         post_message = (
             f"Hello {user.mention},\n\n"
             
-            f"{interaction.user.mention} is interested in offering you a "
-            f"training position at their venue.\n\n"
+            f"{interaction.user.mention} from [{v.name}]({v.post_url}) is interested in "
+            f"offering {user.mention} a training position at their venue.\n\n"
             
             "Please utilize this thread to further discuss the details of "
             "your internship!"
@@ -855,5 +924,68 @@ class JobPostingManager:
             auto_archive_duration=4320  # 3 days
         )
         await thread.send(post_message)
+
+        await thread.add_user(interaction.user)
+        await thread.add_user(user)
+
+        notify = U.make_embed(
+            title="Internship Initiated",
+            description=(
+                f"{interaction.user.display_name} from [{v.name}]({v.post_url}) has "
+                f"initiated an internship thread with {user.mention}.\n\n"
+                
+                "[Please head over here to discuss the details of your partnership!]"
+                f"({thread.jump_url})"
+            )
+        )
+
+        try:
+            await user.send(embed=notify)
+        except Exception:
+            pass
+
+        try:
+            await interaction.user.send(embed=notify)
+        except Exception:
+            pass
+
+################################################################################
+    async def on_member_leave(self, member: Member) -> Tuple[int, int]:
+
+        removed = 0
+        reopened = 0
+
+        for temp_job in self._temporary:
+            if temp_job._user.id == member.id:
+                await temp_job.poster_left()
+                removed += 1
+            elif temp_job._candidate.id == member.id:
+                await temp_job.cancel(None)
+                reopened += 1
+
+        for perm_job in self._permanent:
+            if perm_job._user.id == member.id:
+                await perm_job.delete()
+                removed += 1
+
+        return removed, reopened
+
+################################################################################
+    async def check_revisits(self):
+
+        final = []
+
+        for revisit in self._revisits:
+            if revisit.is_expired():
+                await revisit.context.revisit()
+            else:
+                final.append(revisit)
+
+        self._revisits = final
+
+################################################################################
+    def register_revisit(self, posting: PermanentJobPosting, duration_sec: int = 30) -> None:  # 3 days
+
+        self._revisits.append(RevisitTimer(posting, duration_sec))
 
 ################################################################################

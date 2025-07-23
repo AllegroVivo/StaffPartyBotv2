@@ -8,7 +8,7 @@ class XIVRegion(FroggeEnum):
 
     North_America = 1
     Europe = 2
-    Oceana = 3
+    Oceania = 3
     Japan = 4
 
 ################################################################################

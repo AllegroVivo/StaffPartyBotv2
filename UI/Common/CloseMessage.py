@@ -20,10 +20,10 @@ __all__ = (
 ################################################################################
 class CloseMessageButton(Button):
 
-    def __init__(self):
+    def __init__(self, button_label: str = "Close Message"):
         super().__init__(
             style=ButtonStyle.success,
-            label="Close Message",
+            label=button_label,
             disabled=False,
             row=4
         )

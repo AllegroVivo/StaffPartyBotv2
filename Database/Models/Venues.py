@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean, String, ARRAY
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean, String, ARRAY, TIMESTAMP
 from sqlalchemy.orm import relationship
 
 from .Base import Base
@@ -7,7 +7,27 @@ from .Base import Base
 __all__ = (
     "VenueModel",
     "VenueScheduleModel",
+    "SpecialEventModel",
 )
+
+################################################################################
+class SpecialEventModel(Base):
+
+    __tablename__ = "special_events"
+
+    id = Column(Integer, primary_key=True)
+    venue_id = Column(Integer, ForeignKey("venues.id", name="special_events_venues_fkey", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    start = Column(String, nullable=True)
+    length = Column(String, nullable=True)
+    links = Column(ARRAY(String), nullable=False, server_default="{}")
+    requirements = Column(String, nullable=True)
+    post_url = Column(String, nullable=True)
+
+    # Relationships
+    venue = relationship("VenueModel", back_populates="special_events", passive_deletes=True)
 
 ################################################################################
 class VenueScheduleModel(Base):
@@ -60,11 +80,13 @@ class VenueModel(Base):
     logo_url = Column(String, nullable=True)
     app_url = Column(String, nullable=True)
     post_url = Column(String, nullable=True)
+    event_participation = Column(Boolean, nullable=False, server_default="false")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="venues")
     schedules = relationship("VenueScheduleModel", back_populates="venue", passive_deletes=True)
     temporary_jobs = relationship("TemporaryJobPostingModel", back_populates="venue", passive_deletes=True)
     permanent_jobs = relationship("PermanentJobPostingModel", back_populates="venue", passive_deletes=True)
+    special_events = relationship("SpecialEventModel", back_populates="venue", passive_deletes=True)
 
 ################################################################################

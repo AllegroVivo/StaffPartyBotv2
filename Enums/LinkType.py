@@ -6,12 +6,12 @@ from ._Enum import FroggeEnum
 DLT = TypeVar("DLT", bound="DJLinkType")
 
 ################################################################################
-class DJLinkType(FroggeEnum):
+class LinkType(FroggeEnum):
 
     Twitch = 0
     Schedule = 1
     Discord = 2
-    Twitter = 3
+    Bluesky = 3
     SoundCloud = 4
     Spotify = 5
     YouTube = 6
@@ -20,14 +20,12 @@ class DJLinkType(FroggeEnum):
     Carrd = 9
     Facebook = 10
     Steam = 11
-    Other = 12
+
+    Other = 25
     
 ################################################################################
     @property
     def proper_name(self) -> str:
-
-        if self.value == 3:
-            return "Twitter/X"
 
         return self.name
 
@@ -41,54 +39,53 @@ class DJLinkType(FroggeEnum):
         for link_type, pattern in PATTERNS:
             if pattern.match(url):
                 return link_type
-        return DJLinkType.Other
+        return LinkType.Other
 
 ################################################################################
 
 PATTERNS = [
     (
-        DJLinkType.Carrd,
+        LinkType.Carrd,
         re.compile(r"^https?://(?:[\w-]+\.)*carrd\.co\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Discord,
+        LinkType.Discord,
         re.compile(r"^https?://(?:discord\.(?:gg|com|me)|discordapp\.com)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Facebook,
+        LinkType.Facebook,
         re.compile(r"^https?://(?:www\.)?(?:facebook\.com|fb\.com|fb\.me)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Instagram,
+        LinkType.Instagram,
         re.compile(r"^https?://(?:www\.)?(?:instagram\.com|instagr\.am)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Twitter,
-        # Common for X/Twitter includes x.com, twitter.com, t.co
-        re.compile(r"^https?://(?:x\.com|twitter\.com|t\.co)\S*$", flags=re.IGNORECASE)
+        LinkType.Bluesky,
+        re.compile(r"^https?://(?:www\.)?bsky\.app/profile/[\w.-]+(?:/post/\w+)?/?$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.YouTube,
+        LinkType.YouTube,
         re.compile(r"^https?://(?:www\.)?(?:youtube\.com|youtu\.be)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.TikTok,
+        LinkType.TikTok,
         re.compile(r"^https?://(?:vm\.)?tiktok\.com\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Twitch,
+        LinkType.Twitch,
         re.compile(r"^https?://(?:www\.)?twitch\.tv\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Spotify,
+        LinkType.Spotify,
         re.compile(r"^https?://(?:open\.spotify\.com|spotify\.link)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.SoundCloud,
+        LinkType.SoundCloud,
         re.compile(r"^https?://(?:soundcloud\.com|snd\.sc)\S*$", flags=re.IGNORECASE)
     ),
     (
-        DJLinkType.Schedule,
+        LinkType.Schedule,
         # If you just need any link containing "schedule" or "youcanbookme"
         re.compile(
             r'''^https?://(
@@ -105,7 +102,7 @@ PATTERNS = [
         )
     ),
     (
-        DJLinkType.Steam,
+        LinkType.Steam,
         # Combining store.steampowered.com, steamcommunity.com, and s.team
         re.compile(
             r"^https?://(?:(?:store\.)?steampowered\.com|steamcommunity\.com|s\.team)\S*$",

@@ -110,6 +110,12 @@ class Profile(ManagedObject):
 
 ################################################################################
     @property
+    def color(self) -> FroggeColor:
+
+        return self._aag.accent_color
+
+################################################################################
+    @property
     def personality(self) -> ProfilePersonality:
 
         return self._personality
@@ -243,7 +249,8 @@ class Profile(ManagedObject):
         if char_name is None:
             char_name = f"Character Name: `Not Set`"
         elif url is not None:
-            char_name = f"{BotEmojis.Envelope}  {char_name}  {BotEmojis.Envelope}"
+            icon = U.get_emoji_for_link(url)
+            char_name = f"{icon}  {char_name}  {icon}"
 
         if dm_pref:
             dm_text = (
@@ -278,7 +285,7 @@ class Profile(ManagedObject):
         if personality is not None:
             fields.append(personality)
         if additional_imgs is not None:
-            additional_imgs.value += U.draw_line(extra=15)
+            additional_imgs.value += f"\n{U.draw_line(extra=15)}"
             fields.append(additional_imgs)
 
         main_profile = U.make_embed(
@@ -587,24 +594,46 @@ class Profile(ManagedObject):
         )
 
 ################################################################################
-    async def mute_venue(self, interaction: Interaction, venue: Venue) -> None:
+    def mute_venue(self, venue: Venue) -> bool:
 
-        if venue in self.muted_venues:
-            self._muted_venue_ids.remove(venue.id)
-            flag = False
-        else:
+        already_muted = venue.id in self._muted_venue_ids
+        newly_muted = not already_muted
+        dj_profile = self.bot.dj_profile_manager.get_profile(self.user_id)
+
+        if newly_muted:
             self._muted_venue_ids.append(venue.id)
-            flag = True
-        self.update()
 
-        confirm = U.make_embed(
-            title="Venue Mute Toggle",
+            if dj_profile and venue.id not in dj_profile._muted_venue_ids:
+                dj_profile._muted_venue_ids.append(venue.id)
+                dj_profile.update()
+
+        else:
+            self._muted_venue_ids.remove(venue.id)
+
+            if dj_profile and venue.id in dj_profile._muted_venue_ids:
+                dj_profile._muted_venue_ids.remove(venue.id)
+                dj_profile.update()
+
+        self.update()
+        return newly_muted
+
+################################################################################
+    async def mute_list_report(self, interaction: Interaction) -> None:
+
+        embed = U.make_embed(
+            title=f"Muted Venues Report",
             description=(
-                f"Venue pings for {venue.name} have been "
-                f"{'enabled' if flag else 'disabled'}.\n\n"
-                f"{U.draw_line(extra=25)}"
+                (
+                    "\n".join([f"• {u.name}" for u in self.muted_venues])
+                    if self.muted_venues
+                    else "`No muted venues`"
+                )
+                + f"\n{U.draw_line(extra=20)}"
             )
         )
-        await interaction.respond(embed=confirm, ephemeral=True)
+        view = CloseMessageView(interaction.user)
+
+        await interaction.respond(embed=embed, view=view)
+        await view.wait()
 
 ################################################################################

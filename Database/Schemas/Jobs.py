@@ -29,6 +29,7 @@ class PermanentJobPostingSchema(BaseModel):
     position_id: int
     post_url: Optional[str]
     salary: Optional[str]
+    candidate_id: Optional[int]
 
     class Config:
         from_attributes = True

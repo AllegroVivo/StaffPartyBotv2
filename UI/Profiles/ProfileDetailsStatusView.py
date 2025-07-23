@@ -28,6 +28,7 @@ class ProfileDetailsStatusView(FroggeView):
             SetRPPrefButton(),
             SetPreferredTagsButton(),
             ToggleNSFWButton(),
+            SetTimezoneButton(),
             SetAvailabilityButton(),
             ToggleDMPrefButton(),
             CloseMessageButton()
@@ -194,6 +195,25 @@ class SetAvailabilityButton(FroggeButton):
         await self.view.ctx.set_availability(interaction)
         await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
         
+################################################################################
+class SetTimezoneButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Set Timezone",
+            disabled=False,
+            row=1
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx._tz)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_timezone(interaction)
+        await self.view.edit_message_helper(interaction, embed=self.view.ctx.status())
+
 ################################################################################
 class ToggleDMPrefButton(FroggeButton):
     

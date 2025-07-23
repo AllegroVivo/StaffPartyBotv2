@@ -26,6 +26,7 @@ class ProfileImages(ProfileSection):
         "_thumbnail",
         "_main_image",
         "_additional",
+        "_adding"
     )
 
     MAX_ADDITIONAL_IMAGES: int = 3
@@ -40,6 +41,7 @@ class ProfileImages(ProfileSection):
         self._additional: List[AdditionalImage] = [
             AdditionalImage(self, **a) for a in kwargs.get("additional_images", [])
         ]
+        self._adding: bool = False
 
 ################################################################################
     @property
@@ -227,6 +229,14 @@ class ProfileImages(ProfileSection):
 ################################################################################
     async def set_image(self, interaction: Interaction, image_type: Literal["Thumbnail", "Main"]) -> None:
 
+        if self._adding:
+            await interaction.respond(
+                "You are already in the process of adding an image.",
+                ephemeral=True
+            )
+            return
+
+        self._adding = True
         prompt = U.make_embed(
             title=f"{image_type} Image",
             description=(
@@ -244,6 +254,7 @@ class ProfileImages(ProfileSection):
                 self.main_image = image
 
         await self.update_post_components()
+        self._adding = False
 
 ################################################################################
     async def add_additional_image(self, interaction: Interaction) -> None:
@@ -253,6 +264,14 @@ class ProfileImages(ProfileSection):
             await interaction.respond(embed=error, ephemeral=True)
             return
 
+        if self._adding:
+            await interaction.respond(
+                "You are already in the process of adding an additional image.",
+                ephemeral=True
+            )
+            return
+
+        self._adding = True
         prompt = U.make_embed(
             title="__Additional Image__",
             description=(
@@ -265,6 +284,7 @@ class ProfileImages(ProfileSection):
             self._additional.append(AdditionalImage.new(self, image, None))
 
         await self.update_post_components()
+        self._adding = False
 
 ################################################################################
     async def paginate_additional(self, interaction: Interaction) -> None:

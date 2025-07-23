@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
+from .Services import ServiceRequestManagerSchema
 from .BGChecks import BGCheckManagerSchema
 from .Jobs import JobsManagerSchema
 from .Profiles import ProfileManagerSchema
@@ -40,6 +41,9 @@ class ChannelManagerSchema(BaseModel):
     welcome_channel_id: Optional[int]
     group_training_channel_id: Optional[int]
     bg_check_channel_id: Optional[int]
+    special_event_channel_id: Optional[int]
+    services_channel_id: Optional[int]
+    communication_channel_id: Optional[int]
 
     class Config:
         from_attributes = True
@@ -70,6 +74,7 @@ class MasterResponseSchema(BaseModel):
     profile_manager: ProfileManagerSchema
     jobs_manager: JobsManagerSchema
     dj_manager: DJManagerSchema
+    service_manager: ServiceRequestManagerSchema
 
     class Config:
         from_attributes = True

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from discord import Embed, Message, TextChannel, User, EmbedField, Member
 
@@ -186,6 +186,7 @@ class SPBLogger:
         member: Member,
         venue_deleted: bool,
         profile_deleted: bool,
+        dj_profile_deleted: bool,
         jobs_deleted: int,
         jobs_canceled: int,
     ) -> None:
@@ -197,6 +198,7 @@ class SPBLogger:
 
         venue_emoji = U.yes_no_emoji(venue_deleted)
         profile_emoji = U.yes_no_emoji(profile_deleted)
+        dj_profile_emoji = U.yes_no_emoji(dj_profile_deleted)
 
         embed = U.make_embed(
             title=f"Member Left!",
@@ -207,7 +209,8 @@ class SPBLogger:
                 ("__Jobs Re-Opened__", f"`{jobs_canceled}`", True),
                 ("** **", "** **", False),
                 ("__Venue Deleted__", venue_emoji, True),
-                ("__Profile Deleted__", profile_emoji, True)
+                ("__Profile Deleted__", profile_emoji, True),
+                ("__DJ Profile Deleted__", dj_profile_emoji, True)
             ],
             thumbnail_url=member.display_avatar.url,
             timestamp=True
@@ -230,12 +233,13 @@ class SPBLogger:
         await self._log(embed)
 
 ################################################################################
-    async def temp_job_accepted(self, job: TemporaryJobPosting) -> None:
+    async def job_accepted(self, job: Union[TemporaryJobPosting, PermanentJobPosting]) -> None:
 
+        job_type = job.__class__.__name__.rstrip("JobPosting")
         embed = U.make_embed(
-            title="Temporary Job Accepted!",
+            title=f"{job_type} Job Accepted!",
             description=(
-                f"Temporary job posting for `{job.position.name}` at "
+                f"{job_type} job posting for `{job.position.name}` at "
                 f"`{job.venue.name}` has been accepted by "
                 f"`{(await job.candidate).display_name}`!"
             ),
@@ -245,12 +249,13 @@ class SPBLogger:
         await self._log(embed)
 
 ################################################################################
-    async def temp_job_canceled(self, job: TemporaryJobPosting) -> None:
+    async def job_canceled(self, job: Union[TemporaryJobPosting, PermanentJobPosting]) -> None:
 
+        job_type = job.__class__.__name__.rstrip("JobPosting")
         embed = U.make_embed(
-            title="Temporary Job Rejected!",
+            title=f"{job_type} Job Rejected!",
             description=(
-                f"Temporary job posting for `{job.position.name}` at "
+                f"{job_type} job posting for `{job.position.name}` at "
                 f"`{job.venue.name}` has been canceled by "
                 f"`{(await job.candidate).display_name}`!"
             ),
@@ -267,6 +272,35 @@ class SPBLogger:
             description=(
                 f"New permanent job posting for `{job.position.name}` has "
                 f"been posted by `{job.venue.name}`!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def service_request_posted(self, service: ServiceRequest) -> None:
+
+        embed = U.make_embed(
+            title="Service Request Posted!",
+            description=(
+                f"New service request posting for `{service.service_type.proper_name}` has "
+                f"been posted by `{(await service.user).display_name}`!"
+            ),
+            timestamp=True
+        )
+
+        await self._log(embed)
+
+################################################################################
+    async def service_canceled(self, service: ServiceRequest) -> None:
+
+        embed = U.make_embed(
+            title=f"Service Request Job Canceled!",
+            description=(
+                f"The service request for `{service.service_type.proper_name}` by "
+                f"`{(await service.user).display_name}` has been canceled by "
+                f"`{(await service.candidate).display_name}`!"
             ),
             timestamp=True
         )

@@ -80,34 +80,6 @@ class DatabaseInserter:
                 raise ValueError(f"Error creating venue schedule: {str(e)}")
 
 ################################################################################
-    def position(self, pos_name: str) -> Dict[str, Any]:
-
-        with self._parent._get_db() as db:
-            try:
-                new_pos = PositionModel(name=pos_name)
-                db.add(new_pos)
-                db.commit()
-                db.refresh(new_pos)
-                return PositionSchema.model_validate(new_pos).model_dump()
-            except Exception as e:
-                db.rollback()
-                raise ValueError(f"Error creating position: {str(e)}")
-
-################################################################################
-    def requirement(self, pos_id: Optional[int], text: str) -> Dict[str, Any]:
-
-        with self._parent._get_db() as db:
-            try:
-                new_req = RequirementModel(position_id=pos_id, text=text)
-                db.add(new_req)
-                db.commit()
-                db.refresh(new_req)
-                return RequirementSchema.model_validate(new_req).model_dump()
-            except Exception as e:
-                db.rollback()
-                raise ValueError(f"Error creating requirement: {str(e)}")
-
-################################################################################
     def bg_check(self, user_id: int) -> Dict[str, Any]:
 
         with self._parent._get_db() as db:
@@ -300,5 +272,65 @@ class DatabaseInserter:
             except Exception as e:
                 db.rollback()
                 raise ValueError(f"Error creating dj availability: {str(e)}")
+
+################################################################################
+    def special_event(
+        self,
+        venue_id: int,
+        title: str,
+        description: Optional[str],
+        location: Optional[str],
+        start: Optional[str],
+        length: Optional[str],
+        links: List[str],
+        requirements: Optional[str]
+    ) -> Dict[str, Any]:
+
+        with self._parent._get_db() as db:
+            try:
+                new_event = SpecialEventModel(
+                    venue_id=venue_id,
+                    title=title,
+                    description=description,
+                    location=location,
+                    start=start,
+                    length=length,
+                    links=links,
+                    requirements=requirements
+                )
+                db.add(new_event)
+                db.commit()
+                db.refresh(new_event)
+                return SpecialEventSchema.model_validate(new_event).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating special event: {str(e)}")
+
+################################################################################
+    def service_request(
+        self,
+        user_id: int,
+        service: int,
+        dc: Optional[int],
+        description: Optional[str],
+        budget: Optional[str],
+    ):
+
+        with self._parent._get_db() as db:
+            try:
+                new_request = ServiceRequestModel(
+                    user_id=user_id,
+                    service=service,
+                    dc=dc,
+                    description=description,
+                    budget=budget
+                )
+                db.add(new_request)
+                db.commit()
+                db.refresh(new_request)
+                return ServiceRequestSchema.model_validate(new_request).model_dump()
+            except Exception as e:
+                db.rollback()
+                raise ValueError(f"Error creating service request: {str(e)}")
 
 ################################################################################

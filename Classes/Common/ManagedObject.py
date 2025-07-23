@@ -75,7 +75,7 @@ class ManagedObject(Identifiable, FroggeObject):
             await self.update_post_components()  # type: ignore
 
 ################################################################################
-    async def remove(self, interaction: Interaction) -> None:
+    async def remove(self, interaction: Interaction) -> bool:
 
         prompt = U.make_embed(
             title=f"Remove ",
@@ -89,8 +89,9 @@ class ManagedObject(Identifiable, FroggeObject):
         await view.wait()
 
         if not view.complete or view.value is False:
-            return
+            return False
 
         self.delete()
+        return True
 
 ################################################################################

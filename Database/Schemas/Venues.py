@@ -7,7 +7,24 @@ __all__ = (
     "VenueManagerSchema",
     "VenueSchema",
     "VenueScheduleSchema",
+    "SpecialEventSchema",
 )
+
+################################################################################
+class SpecialEventSchema(BaseModel):
+
+    id: int
+    title: Optional[str]
+    description: Optional[str]
+    location: Optional[str]
+    start: Optional[str]
+    length: Optional[str]
+    links: List[str]
+    requirements: Optional[str]
+    post_url: Optional[str]
+
+    class Config:
+        from_attributes = True
 
 ################################################################################
 class VenueScheduleSchema(BaseModel):
@@ -54,7 +71,9 @@ class VenueSchema(BaseModel):
     logo_url: Optional[str]
     app_url: Optional[str]
     post_url: Optional[str]
+    event_participation: bool
     schedules: List[VenueScheduleSchema] = []
+    special_events: List[SpecialEventSchema] = []
 
     class Config:
         from_attributes = True

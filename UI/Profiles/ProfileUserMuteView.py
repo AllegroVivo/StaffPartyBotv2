@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from discord import Interaction, ButtonStyle
 from discord.ui import View
 
+from Assets import BotEmojis
 from UI.Common import FroggeButton
 
 if TYPE_CHECKING:
-    from Classes import Profile
+    from Classes import Profile, DJProfile
 ################################################################################
 
 __all__ = ("ProfileUserMuteView",)
@@ -16,11 +17,11 @@ __all__ = ("ProfileUserMuteView",)
 ################################################################################        
 class ProfileUserMuteView(View):
 
-    def __init__(self, profile: Profile):
+    def __init__(self, profile: Union[Profile, DJProfile]):
 
         super().__init__(timeout=None)
 
-        self.profile: Profile = profile
+        self.profile: Union[Profile, DJProfile] = profile
         self.add_item(MuteUserButton(self.profile.id, self.profile.user_id))
 
 ################################################################################        
@@ -33,7 +34,8 @@ class MuteUserButton(FroggeButton):
             label="Mute/Unmute User",
             disabled=False,
             row=0,
-            custom_id=f"mute_user_{_id}"
+            custom_id=f"mute_user_{_id}",
+            emoji=BotEmojis.Mute
         )
 
         self.user_id: int = user_id

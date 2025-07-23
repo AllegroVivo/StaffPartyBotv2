@@ -29,6 +29,9 @@ class ChannelManagerMenuView(FroggeView):
             UpdateChannelButton(ChannelPurpose.PermJobs, 1),
             UpdateChannelButton(ChannelPurpose.Internship, 1),
             UpdateChannelButton(ChannelPurpose.DJProfiles, 1),
+            UpdateChannelButton(ChannelPurpose.SpecialEvents, 2),
+            UpdateChannelButton(ChannelPurpose.Services, 2),
+            UpdateChannelButton(ChannelPurpose.Communication, 2),
             CloseMessageButton()
         ]
         for btn in button_list:

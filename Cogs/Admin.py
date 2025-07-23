@@ -30,30 +30,6 @@ class Admin(Cog):
 
 ################################################################################
     @admin.command(
-        name="import_venue",
-        description="Import a new venue into the system."
-    )
-    async def import_venue(
-        self,
-        ctx: ApplicationContext,
-        name: Option(
-            SlashCommandOptionType.string,
-            name="name",
-            description="The name of the venue.",
-            required=True
-        ),
-        user: Option(
-            SlashCommandOptionType.user,
-            name="user",
-            description="One of the venue's Owner/Manager contacts.",
-            required=True
-        )
-    ) -> None:
-
-        await self.bot.venue_manager.import_venue(ctx.interaction, name, user)
-
-################################################################################
-    @admin.command(
         name="channels",
         description="Set channels for server operations."
     )

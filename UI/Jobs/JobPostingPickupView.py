@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from discord import ButtonStyle
 from discord.ui import Button, View
@@ -8,7 +8,7 @@ from discord.ui import Button, View
 from Assets import BotEmojis
 
 if TYPE_CHECKING:
-    from Classes import TemporaryJobPosting
+    from Classes import TemporaryJobPosting, PermanentJobPosting
 ################################################################################
 
 __all__ = ("JobPostingPickupView",)
@@ -16,11 +16,11 @@ __all__ = ("JobPostingPickupView",)
 ################################################################################
 class JobPostingPickupView(View):
 
-    def __init__(self, posting: TemporaryJobPosting):
+    def __init__(self, posting: Union[TemporaryJobPosting, PermanentJobPosting]):
         
         super().__init__(timeout=None)
         
-        self.posting: TemporaryJobPosting = posting
+        self.posting: Union[TemporaryJobPosting, PermanentJobPosting] = posting
 
         if posting._candidate.id is None:
             self.add_item(AcceptButton(posting.id))
@@ -38,7 +38,7 @@ class AcceptButton(Button):
             disabled=False,
             row=0,
             emoji=BotEmojis.Check,
-            custom_id=f"{posting_id}_accept"
+            custom_id=f"{posting_id}_perm_accept"
         )
         
     async def callback(self, interaction):
@@ -47,7 +47,7 @@ class AcceptButton(Button):
 ################################################################################
 class CancelButton(Button):
     
-    def __init__(self, posting: TemporaryJobPosting):
+    def __init__(self, posting: Union[TemporaryJobPosting, PermanentJobPosting]):
         
         super().__init__(
             style=ButtonStyle.secondary,
@@ -55,7 +55,7 @@ class CancelButton(Button):
             disabled=False,
             row=0,
             emoji=BotEmojis.Cross,
-            custom_id=f"{posting.id}_cancel"
+            custom_id=f"{posting.id}_perm_cancel"
         )
         
         self.user_id: int = posting._candidate.id
@@ -64,7 +64,7 @@ class CancelButton(Button):
         if interaction.user.id == self.user_id:
             await self.view.posting.cancel(interaction)
         else:
-            await interaction.respond("You can't cancel a job posting for someone else.", ephemeral=True)
+            await interaction.respond("You can't cancel a job posting someone else has accepted.", ephemeral=True)
         
 ################################################################################
         

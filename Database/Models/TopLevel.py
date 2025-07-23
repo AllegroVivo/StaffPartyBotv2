@@ -32,6 +32,9 @@ class TopLevelDataModel(Base):
     group_training_channel_id = Column(BigInteger, nullable=True)  # Now represents the Internship channel
     bg_check_channel_id = Column(BigInteger, nullable=True)  # Now represents the DJ Profile channel
     restart_channel_ids = Column(ARRAY(BigInteger), nullable=True)
+    special_event_channel_id = Column(BigInteger, nullable=True)
+    services_channel_id = Column(BigInteger, nullable=True)
+    communication_channel_id = Column(BigInteger, nullable=True)
 
     # Roles
     staff_role_id = Column(BigInteger, nullable=True)
@@ -50,5 +53,6 @@ class TopLevelDataModel(Base):
     temporary_jobs = relationship("TemporaryJobPostingModel", back_populates="top_level", passive_deletes=True)
     permanent_jobs = relationship("PermanentJobPostingModel", back_populates="top_level", passive_deletes=True)
     dj_profiles = relationship("DJProfileModel", back_populates="top_level", passive_deletes=True)
+    service_requests = relationship("ServiceRequestModel", back_populates="top_level", passive_deletes=True)
 
 ################################################################################

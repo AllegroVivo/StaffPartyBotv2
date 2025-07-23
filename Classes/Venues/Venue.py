@@ -2,21 +2,39 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, List, Optional, Type, Dict, Any
 
-from discord import User, Embed, Interaction, Message, EmbedField, ForumChannel, ForumTag, NotFound, Colour, Thread, SelectOption
+from discord import (
+    User,
+    Embed,
+    Interaction,
+    Message,
+    EmbedField,
+    ForumTag,
+    NotFound,
+    Colour,
+    Thread,
+    SelectOption
+)
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
 from Enums import RPLevel, Position
-from UI.Common import FroggeView, FroggeSelectView, ConfirmCancelView, BasicTextModal
+from UI.Common import (
+    FroggeView,
+    FroggeSelectView,
+    ConfirmCancelView,
+    BasicTextModal,
+    CloseMessageView
+)
 from UI.Venues import VenuePostingMuteView, VenueStatusView
 from .VenueLocation import VenueLocation
 from .VenueHours import VenueHours
 from .VenueURLs import VenueURLs
 from Utilities import Utilities as U
 from .VenueJobSupervisor import VenueJobSupervisor
+from .SpecialEventManager import SpecialEventManager
 
 if TYPE_CHECKING:
-    from Classes import VenueManager, XIVVenue, Profile
+    from Classes import VenueManager, XIVVenue, SpecialEvent
 ################################################################################
 
 __all__ = ("Venue",)
@@ -43,7 +61,9 @@ class Venue(ManagedObject):
         "_mare_pass",
         "_mutes",
         "_xiv_id",
+        "_event_participation",
         "_job_super",
+        "_event_mgr",
     )
 
 ################################################################################
@@ -62,6 +82,7 @@ class Venue(ManagedObject):
 
         self._hiring: bool = kwargs.get("hiring", True)
         self._nsfw: bool = kwargs.get("nsfw", False)
+        self._event_participation: bool = kwargs.get("event_participation", False)
 
         self._rp_level: Optional[RPLevel] = (
             RPLevel(kwargs["rp_level"])
@@ -89,6 +110,7 @@ class Venue(ManagedObject):
         self._post_msg: LazyMessage = LazyMessage(self, kwargs.get("post_url"))
 
         self._job_super: VenueJobSupervisor = VenueJobSupervisor(self)
+        self._event_mgr: SpecialEventManager = SpecialEventManager(self, **kwargs)
 
 ################################################################################
     @classmethod
@@ -226,6 +248,18 @@ class Venue(ManagedObject):
 
 ################################################################################
     @property
+    def event_participation(self) -> bool:
+
+        return self._event_participation
+
+    @event_participation.setter
+    def event_participation(self, value: bool) -> None:
+
+        self._event_participation = value
+        self.update()
+
+################################################################################
+    @property
     async def post_message(self) -> Optional[Message]:
 
         return await self._post_msg.get()
@@ -286,6 +320,7 @@ class Venue(ManagedObject):
             "mute_ids": [u.id for u in self._mutes],
             "tags": self._tags,
             "post_url": self._post_msg.id,
+            "event_participation": self._event_participation,
             **self._location.to_dict(),
             **self._urls.to_dict(),
         }
@@ -375,7 +410,7 @@ class Venue(ManagedObject):
                 inline=False,
             )
         ]
-        if post:
+        if not post:
             fields.append(EmbedField(
                 name="__Post Status__",
                 value=(
@@ -414,12 +449,12 @@ class Venue(ManagedObject):
                 return
 
         self._xiv_id = venue.id
-        self._name: str = venue.name
-        self._description: List[str] = venue.description.copy() if venue.description else []
+        self._name = venue.name
+        self._description = venue.description.copy() if venue.description else []
 
-        self._mare_id: Optional[str] = venue.mare_id
-        self._mare_pass: Optional[str] = venue.mare_pass
-        self._hiring: bool = venue.hiring
+        self._mare_id = venue.mare_id
+        self._mare_pass = venue.mare_pass
+        # self._hiring: bool = venue.hiring
         self._nsfw = not venue.sfw
         self._tags = venue.tags
 
@@ -621,7 +656,7 @@ class Venue(ManagedObject):
             )
         )
         options = [SelectOption(label="None", value="None", description="This will deactivate all DMs.")]
-        options.extend(Position.limited_select_options())
+        options.extend(Position.limited_select_options([Position.General_Training]))
         view = FroggeSelectView(interaction.user, options, multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
@@ -647,7 +682,21 @@ class Venue(ManagedObject):
 ################################################################################
     async def remove(self, interaction: Interaction) -> None:
 
-        await super().remove(interaction)
+        prompt = U.make_embed(
+            title=f"Remove ",
+            description=(
+                f"Are you sure you want to remove `{self.name}`?"
+            )
+        )
+        view = ConfirmCancelView(interaction.user)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        await self.delete()
 
         confirm = U.make_embed(
             title="Venue Removed",
@@ -657,7 +706,7 @@ class Venue(ManagedObject):
         await self.bot.log.venue_removed(self)
 
 ################################################################################
-    async def toggle_user_mute(self, user_id: int) -> None:
+    async def toggle_user_mute(self, user_id: int) -> bool:
 
         flag = LazyUser(self, user_id) in self._mutes
         if flag:
@@ -666,6 +715,7 @@ class Venue(ManagedObject):
             self._mutes.append(LazyUser(self, user_id))
 
         self.update()
+        return flag
 
 ################################################################################
     async def continue_import(self, interaction: Interaction) -> None:
@@ -709,7 +759,7 @@ class Venue(ManagedObject):
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
 
-        if not view.complete or view.value is False:
+        if not view.complete:
             return
 
         self.hiring = view.value
@@ -735,9 +785,6 @@ class Venue(ManagedObject):
             await interaction.respond(embed=prompt, view=view)
             await view.wait()
 
-            if view.value is None:
-                return
-
             if view.value is not False:
                 _, inter = view.value
 
@@ -756,37 +803,37 @@ class Venue(ManagedObject):
 
                 self._urls.application = modal.value
 
-        prompt = U.make_embed(
-            title="Next Steps",
-            description=(
-                "Great! You've set the RP level for your venue!\n\n"
-                
-                "Next, let's set the permanent positions that your venue employs.\n\n"
-                
-                "You may pick multiple positions from the selector below.\n"
+            prompt = U.make_embed(
+                title="Next Steps",
+                description=(
+                    "Great! You're almost done!\n\n"
+                    
+                    "Next, let's set the permanent positions that your venue employs.\n\n"
+                    
+                    "You may pick multiple positions from the selector below.\n"
+                )
             )
-        )
-        view = FroggeSelectView(
-            owner=interaction.user,
-            options=Position.select_options(),
-            multi_select=True
-        )
+            view = FroggeSelectView(
+                owner=interaction.user,
+                options=Position.limited_select_options([Position.General_Training]),
+                multi_select=True
+            )
 
-        await interaction.followup.send(embed=prompt, view=view)
-        await view.wait()
+            await interaction.followup.send(embed=prompt, view=view)
+            await view.wait()
 
-        if not view.complete or view.value is False:
-            return
+            if not view.complete or view.value is False:
+                return
 
-        self.positions = [Position(int(v)) for v in view.value]
-        await self.update_post_components(True)
+            self.positions = [Position(int(v)) for v in view.value]
+            await self.update_post_components(True)
 
         prompt = U.make_embed(
             title="Next Steps",
             description=(
-                "Fantastic! You've set the positions that your venue employs!\n\n"
+                "Fantastic! This is the final step in the setup process!\n\n"
                 
-                "Next, let's set the logo for your venue.\n\n"
+                "Let's set the logo for your venue.\n\n"
                 
                 "Please upload the image you'd like to use to this channel now.\n"
                 "*(Yeah, just upload it normally into discord like you're going to share it.)*"
@@ -822,5 +869,72 @@ class Venue(ManagedObject):
     async def jobs_posting_menu(self, interaction: Interaction) -> None:
 
         await self._job_super.menu(interaction)
+
+################################################################################
+    async def special_events_menu(self, interaction: Interaction) -> None:
+
+        await self._event_mgr.menu(interaction)
+
+################################################################################
+    async def mute_list_report(self, interaction: Interaction) -> None:
+
+        muted_users = await self.muted_users
+        embed = U.make_embed(
+            title=f"Muted Users Report",
+            description=(
+                (
+                    "\n".join([f"• {u.mention}" for u in muted_users])
+                    if muted_users
+                    else "`No muted users`"
+                )
+                + f"\n{U.draw_line(extra=20)}"
+            )
+        )
+        view = CloseMessageView(interaction.user)
+
+        await interaction.respond(embed=embed, view=view)
+        await view.wait()
+
+################################################################################
+    async def notify_of_event(self, event: SpecialEvent):
+
+        assert self.event_participation
+        assert event.post_url is not None
+
+        notification = U.make_embed(
+            title="New Special Event Posted!",
+            description=(
+                f"Your venue has been tagged for an event!\n\n"
+                f"Event: **{event.title}**\n"
+                f"Description: **{U.string_clamp(event.description or '`Not Set`', 100)}**\n"
+                f"Location: **{event.location or '`Not Set`'}**\n"
+                f"Date: **{event.start or '`Not Set`'}**\n"
+                f"Length: **{event.length or '`Not Set`'}**\n\n"
+                
+                f"[Click here to view the full event listing]({event.post_url})\n"
+            ),
+            fields=[
+                EmbedField(
+                    name="__Related Links__",
+                    value=event._links_field(),
+                    inline=False
+                ),
+                EmbedField(
+                    name="__Participation Requirements__",
+                    value=U.string_clamp(event.requirements or '`Not Set`', 250),
+                    inline=False
+                )
+            ],
+            footer_text=(
+                "If you want to stop receiving notifications for special events,"
+                "you may do so in your `/venue profile`."
+            )
+        )
+
+        for manager in await self.managers:
+            try:
+                await manager.send(embed=notification)
+            except:
+                pass
 
 ################################################################################

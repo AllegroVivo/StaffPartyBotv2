@@ -10,6 +10,9 @@ class ChannelPurpose(FroggeEnum):
     Internship = 6
     PermJobs = 7
     DJProfiles = 8
+    SpecialEvents = 9
+    Services = 10
+    Communication = 11
 
 ################################################################################
     @property
@@ -29,6 +32,8 @@ class ChannelPurpose(FroggeEnum):
             return "Permanent Jobs Channel"
         elif self.value == 8:
             return "DJ Profiles Channel"
+        elif self.value == 9:
+            return "Special Events Channel"
         
         return self.name + " Channel"
     

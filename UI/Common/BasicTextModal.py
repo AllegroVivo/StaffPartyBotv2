@@ -46,7 +46,8 @@ class BasicTextModal(FroggeModal):
         self.add_item(
             InputText(
                 style=(
-                    InputTextStyle.multiline if multiline
+                    InputTextStyle.multiline
+                    if multiline
                     else InputTextStyle.singleline
                 ),
                 label=attribute,

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from discord import Embed, Interaction, PartialEmoji, SelectOption
 
 from Assets import BotEmojis
-from Enums import DJLinkType
+from Enums import LinkType
 from Errors import MaxItemsReached
 from UI.Common import BasicTextModal, FroggeSelectView
 from UI.DJs import DJProfileLinksStatusView
@@ -40,7 +40,7 @@ class DJLinkManager:
     @property
     def links(self) -> List[str]:
 
-        self._links.sort(key=lambda x: DJLinkType.identify_link_type(x).value)
+        self._links.sort(key=lambda x: LinkType.identify_link_type(x).value)  # type: ignore
         return self._links
 
 ################################################################################
@@ -48,7 +48,7 @@ class DJLinkManager:
     def twitch_link(self) -> Optional[str]:
 
         return next(
-            (l for l in self._links if DJLinkType.identify_link_type(l) == DJLinkType.Twitch),
+            (l for l in self._links if LinkType.identify_link_type(l) == LinkType.Twitch),
             None
         )
 
@@ -84,10 +84,10 @@ class DJLinkManager:
 
         links = []
         for link in self.links:
-            link_type = DJLinkType.identify_link_type(link)
+            link_type = LinkType.identify_link_type(link)
             link_name = (
                 link_type.proper_name
-                if link_type != DJLinkType.Other
+                if link_type != LinkType.Other
                 else self.extract_root_domain(link)
             )
             links.append(f"{self.get_emoji_for_link_type(link_type)} [{link_name}]({link})")
@@ -96,32 +96,32 @@ class DJLinkManager:
 
 ################################################################################
     @staticmethod
-    def get_emoji_for_link_type(link_type: DJLinkType) -> PartialEmoji:
+    def get_emoji_for_link_type(link_type: LinkType) -> PartialEmoji:
 
         match link_type:
-            case DJLinkType.Carrd:
+            case LinkType.Carrd:
                 return BotEmojis.CarrdLogo
-            case DJLinkType.Discord:
+            case LinkType.Discord:
                 return BotEmojis.DiscordLogo
-            case DJLinkType.Facebook:
+            case LinkType.Facebook:
                 return BotEmojis.FacebookLogo
-            case DJLinkType.Instagram:
+            case LinkType.Instagram:
                 return BotEmojis.InstagramLogo
-            case DJLinkType.Twitter:
-                return BotEmojis.TwitterLogo
-            case DJLinkType.YouTube:
+            case LinkType.Bluesky:
+                return BotEmojis.BlueskyLogo
+            case LinkType.YouTube:
                 return BotEmojis.YouTubeLogo
-            case DJLinkType.TikTok:
+            case LinkType.TikTok:
                 return BotEmojis.TikTokLogo
-            case DJLinkType.Twitch:
+            case LinkType.Twitch:
                 return BotEmojis.TwitchLogo
-            case DJLinkType.Spotify:
+            case LinkType.Spotify:
                 return BotEmojis.SpotifyLogo
-            case DJLinkType.SoundCloud:
+            case LinkType.SoundCloud:
                 return BotEmojis.SoundCloudLogo
-            case DJLinkType.Schedule:
+            case LinkType.Schedule:
                 return BotEmojis.CalendarLogo
-            case DJLinkType.Steam:
+            case LinkType.Steam:
                 return BotEmojis.SteamLogo
             case _:
                 return BotEmojis.GenericLinkIcon
@@ -134,6 +134,9 @@ class DJLinkManager:
         and then try to isolate a 'root' domain (e.g. 'example' from 'sub.example.co.uk').
         Returns the final piece capitalized, or an empty string if no domain found.
         """
+
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url  # add default scheme for parsing
 
         parsed = urlparse(url)
         # netloc is the host: e.g. 'www.example.com' or 'sub.example.co.uk'
@@ -236,7 +239,7 @@ class DJLinkManager:
                 SelectOption(
                     label=label,
                     value=short_id,
-                    emoji=self.get_emoji_for_link_type(DJLinkType.identify_link_type(link))
+                    emoji=self.get_emoji_for_link_type(LinkType.identify_link_type(link))
                 )
             )
 

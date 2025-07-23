@@ -6,6 +6,7 @@ import textwrap
 from datetime import datetime, time
 from enum import Enum
 from typing import Any, List, Optional, Tuple, Union, Literal, TYPE_CHECKING, Dict
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 import emoji
@@ -18,13 +19,16 @@ from discord import (
     ChannelType,
     User,
     Role,
-    Emoji, Message, TextChannel, ForumChannel, Interaction, SelectOption, Forbidden
+    Emoji, Message, TextChannel, ForumChannel, Interaction, SelectOption, Forbidden, PartialEmoji, ButtonStyle
 )
 from discord.abc import GuildChannel
 
 from Assets import BotEmojis
+from Enums import Month, LinkType
 from Enums.Timezone import Timezone
 from Enums.Position import Position
+from UI.Common import FroggeSelectView, TimeSelectView
+from UI.Common.ConfirmCancelView import ConfirmCancelView
 from UI.Common.FroggeMultiMenuSelect import FroggeMultiMenuSelect
 from .Colors import CustomColor
 from .ErrorMessage import ErrorMessage
@@ -76,7 +80,7 @@ class Utilities:
         Position.DJ: 6,
         Position.Courtesan: 7,
         Position.Exotic_Dancer: 8,
-        Position.Host: 9,
+        Position.Host_Dancer: 9,
         Position.Pillow: 10,
         Position.Security: 11,
         Position.Tarot_Reader: 12,
@@ -620,7 +624,7 @@ class Utilities:
                 except NotFound:
                     pass
             else:
-                image_url = await interaction.client.dump_image_cloudinary(message.attachments[0])  # type: ignore
+                image_url = await interaction.client.dump_image_cloudinary(message.attachments[0], view.value)  # type: ignore
 
             try:
                 await intermediate.delete()
@@ -634,8 +638,11 @@ class Utilities:
 
         try:
             await msg.delete_original_response()
-        except NotFound:
-            pass
+        except:
+            try:
+                await msg.delete()
+            except:
+                pass
         
         return image_url
     
@@ -757,6 +764,27 @@ class Utilities:
         add_markdown: bool = True,
         add_bullet: bool = True
     ) -> List[str]:
+        """
+        Splits a list of items into a specified number of columns.
+
+        Parameters:
+        -----------
+        items: List[str]
+            The list of items to split into columns.
+        columns: int
+            The number of columns to split the items into.
+        add_markdown: bool
+            Whether to add Markdown formatting to the items.
+            Defaults to True.
+        add_bullet: bool
+            Whether to add a bullet point before each item.
+            Defaults to True.
+
+        Returns:
+        --------
+        List[str]
+            A list of strings of length `columns`, each representing a column of items.
+        """
 
         # Initialize a list of strings for each column
         column_strs = ["" for _ in range(columns)]
@@ -794,5 +822,203 @@ class Utilities:
     def wrap_text(text: str, line_length: int) -> str:
 
         return "\n".join(textwrap.wrap(text, width=line_length))
+
+################################################################################
+    @staticmethod
+    async def collect_datetime(
+        interaction: Interaction,
+        op_name: str,
+        date_type: Literal["Start", "End"],
+        tz: Optional[ZoneInfo] = None
+    ) -> Optional[Tuple[datetime, ZoneInfo]]:
+        """
+        op_name - The name of the operation (e.g., "Event", "Job Posting").
+        """
+
+        if tz is None:
+            prompt = Utilities.make_embed(
+                title=f"{op_name.title()} Timezone",
+                description=f"Please select the timezone for this {op_name.lower()}."
+            )
+            view = FroggeSelectView(interaction.user, Timezone.select_options())
+
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if not view.complete or view.value is False:
+                return None
+
+            tz = Utilities.TIMEZONE_OFFSETS[Timezone(int(view.value))]
+
+        prompt = Utilities.make_embed(
+            title=f"{op_name.title()} {date_type} Time",
+            description=f"Please select the month this {op_name.lower()} {date_type.lower()}s in."
+        )
+        view = FroggeSelectView(interaction.user, Month.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        month = Month(int(view.value))
+
+        prompt = Utilities.make_embed(
+            title=f"{op_name.title()} {date_type} Time",
+            description=f"Please select the day this {op_name.lower()} {date_type.lower()}s on."
+        )
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(1, month.days() + 1)]
+        view = FroggeMultiMenuSelect(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        day = int(view.value)
+
+        prompt = Utilities.make_embed(
+            title=f"{op_name.title()} {date_type} Time",
+            description=(
+                f"Please select the year of this {op_name.lower()}'s "
+                f"{date_type.lower()} time."
+            )
+        )
+        cur_year = datetime.now().year
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(cur_year, cur_year + 2)]
+        view = FroggeSelectView(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        year = int(view.value)
+
+        prompt = Utilities.make_embed(
+            title=f"{op_name.title()} {date_type} Time",
+            description=(
+                f"Please select the hour, then minute increment of this {op_name.lower()}'s "
+                f"{date_type.lower()} time."
+            )
+        )
+        view = TimeSelectView(interaction.user)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        hours, minutes = view.value
+        return datetime(
+            year=year,
+            month=month.value,
+            day=day,
+            hour=hours,
+            minute=minutes,
+            tzinfo=tz
+        ), tz
+
+################################################################################
+    @staticmethod
+    def links_list(links: List[str]) -> List[str]:
+
+        ret = []
+        for link in links:
+            link_type = LinkType.identify_link_type(link)
+            link_name = (
+                link_type.proper_name
+                if link_type != LinkType.Other
+                else Utilities.extract_root_domain(link)
+            )
+            ret.append(f"{Utilities.get_emoji_for_link_type(link_type)} [{link_name}]({link})")
+
+        return ret
+
+################################################################################
+    @staticmethod
+    def get_emoji_for_link_type(link_type: LinkType) -> PartialEmoji:
+
+        match link_type:
+            case LinkType.Carrd:
+                return BotEmojis.CarrdLogo
+            case LinkType.Discord:
+                return BotEmojis.DiscordLogo
+            case LinkType.Facebook:
+                return BotEmojis.FacebookLogo
+            case LinkType.Instagram:
+                return BotEmojis.InstagramLogo
+            case LinkType.Bluesky:
+                return BotEmojis.BlueskyLogo
+            case LinkType.YouTube:
+                return BotEmojis.YouTubeLogo
+            case LinkType.TikTok:
+                return BotEmojis.TikTokLogo
+            case LinkType.Twitch:
+                return BotEmojis.TwitchLogo
+            case LinkType.Spotify:
+                return BotEmojis.SpotifyLogo
+            case LinkType.SoundCloud:
+                return BotEmojis.SoundCloudLogo
+            case LinkType.Schedule:
+                return BotEmojis.CalendarLogo
+            case LinkType.Steam:
+                return BotEmojis.SteamLogo
+            case _:
+                return BotEmojis.GenericLinkIcon
+
+################################################################################
+    @staticmethod
+    def get_emoji_for_link(link: str) -> PartialEmoji:
+
+        return Utilities.get_emoji_for_link_type(LinkType.identify_link_type(link))
+
+################################################################################
+    @staticmethod
+    def extract_root_domain(url: str) -> str:
+        """
+        Parses 'url' to extract the host (netloc), remove 'www.' if present,
+        and then try to isolate a 'root' domain (e.g. 'example' from 'sub.example.co.uk').
+        Returns the final piece capitalized, or an empty string if no domain found.
+        """
+
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url  # add default scheme for parsing
+
+        parsed = urlparse(url)
+        # netloc is the host: e.g. 'www.example.com' or 'sub.example.co.uk'
+        netloc = parsed.netloc or ""
+
+        # In case there's a user:pass@host format
+        if '@' in netloc:
+            netloc = netloc.split('@', 1)[-1]
+
+        # Remove a leading 'www.'
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+
+        # If there's nothing left, bail out
+        if not netloc:
+            return ""
+
+        # Split on dots, e.g. 'sub.example.co.uk' => ['sub','example','co','uk']
+        parts = netloc.split('.')
+
+        # If there's only 1 part, e.g. 'localhost' or 'example',
+        # just use that as domain.
+        if len(parts) == 1:
+            return parts[0].capitalize()
+
+        # For 2 or more parts, the last part is TLD (like 'com' or 'co.uk')
+        # The second to last part is likely the "root" domain.
+        # e.g. parts = ['sub','example','co','uk'] => root domain is 'example'
+        # e.g. parts = ['example','com'] => root domain is 'example'
+        # We'll pick parts[-2].
+        root = parts[-2]
+        return root.capitalize()
 
 ################################################################################

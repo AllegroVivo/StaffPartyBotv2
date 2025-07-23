@@ -29,7 +29,8 @@ class VenueStatusView(FroggeView):
             LogoButton(),
             MuteReportButton(),
             JobsMenuButton(),
-            PostVenueButton(),
+            SpecialEventsMenuButton(),
+            # PostVenueButton(),
             UpdateVenueButton(),
             CloseMessageButton()
         ]
@@ -166,6 +167,21 @@ class JobsMenuButton(FroggeButton):
 
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.jobs_posting_menu(interaction)
+
+################################################################################
+class SpecialEventsMenuButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.primary,
+            label="Special Events Management",
+            row=1,
+            disabled=False
+        )
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.special_events_menu(interaction)
 
 ################################################################################
 class PostVenueButton(Button):

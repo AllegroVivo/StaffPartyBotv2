@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from zoneinfo import ZoneInfo
-from typing import TYPE_CHECKING, Optional, Type, TypeVar, List
+from typing import TYPE_CHECKING, Optional, Type, TypeVar, List, Any, Dict
 
 from discord import (
     User,
@@ -16,10 +16,10 @@ from discord import (
 
 from Assets import BotEmojis
 from Classes.Common import Identifiable, LazyUser, LazyMessage
-from Enums import Weekday, Position, MusicGenre
-from UI.Jobs import JobPostingPickupView, TemporaryJobPostingStatusView
+from Enums import Weekday, Position, MusicGenre, Timezone, Month, TimeType, Hours, Minutes
+from UI.Jobs import JobPostingPickupView, TemporaryJobPostingStatusView, JobTimeButtonsView, JobTimeComponentView
 from Utilities import Utilities as U
-from UI.Common import ConfirmCancelView
+from UI.Common import ConfirmCancelView, BasicTextModal, FroggeSelectView, FroggeMultiMenuSelect, TimeSelectView
 
 if TYPE_CHECKING:
     from Classes import JobPostingManager, Venue, StaffPartyBot
@@ -45,6 +45,7 @@ class TemporaryJobPosting(Identifiable):
         "_candidate",
         "_schedule_updated",
         "_genres",
+        "_tz",
     )
 
 ################################################################################
@@ -72,6 +73,7 @@ class TemporaryJobPosting(Identifiable):
         self._end: datetime = kwargs.get("end_dt").replace(tzinfo=ZoneInfo("UTC"))
 
         self._schedule_updated: bool = False
+        self._tz: Optional[ZoneInfo] = kwargs.get("timezone", None)
 
 ################################################################################
     @classmethod
@@ -85,7 +87,8 @@ class TemporaryJobPosting(Identifiable):
         salary: str,
         start_dt: datetime,
         end_dt: datetime,
-        genres: Optional[List[MusicGenre]] = None
+        genres: Optional[List[MusicGenre]] = None,
+        tz: Optional[ZoneInfo] = None
     ) -> JP:
 
         new_data = mgr.bot.db.insert.temporary_job(
@@ -98,6 +101,7 @@ class TemporaryJobPosting(Identifiable):
             end_dt=end_dt,
             genres=[g.value for g in genres] if genres else []
         )
+        new_data["timezone"] = tz
         return cls(mgr, **new_data)
 
 ################################################################################
@@ -145,6 +149,54 @@ class TemporaryJobPosting(Identifiable):
 
         self._candidate.set(value)
 
+    @property
+    def is_accepted(self) -> bool:
+
+        return self._candidate.id is not None
+
+################################################################################
+    @property
+    def description(self) -> Optional[str]:
+
+        return self._description
+
+    @description.setter
+    def description(self, value: Optional[str]) -> None:
+
+        self._description = value
+        self.update()
+
+################################################################################
+    @property
+    def salary(self) -> Optional[str]:
+
+        return self._salary
+
+    @salary.setter
+    def salary(self, value: Optional[str]) -> None:
+
+        self._salary = value
+        self.update()
+
+################################################################################
+    @property
+    def timezone(self) -> Optional[ZoneInfo]:
+
+        return self._tz
+
+    @property
+    def start_time(self) -> datetime:
+
+        return self._start
+
+################################################################################
+    def _set_schedule_impl(self, start: datetime, end: datetime) -> None:
+
+        self._start = start.astimezone(UTC)
+        self._end = end.astimezone(UTC)
+        self._schedule_updated = True
+        self.update()
+
 ################################################################################
     @property
     def position(self) -> Position:
@@ -168,6 +220,24 @@ class TemporaryJobPosting(Identifiable):
     def is_dj_posting(self) -> bool:
 
         return self.position == Position.DJ
+
+################################################################################
+    def update(self) -> None:
+
+        self.bot.db.update.temporary_job(self)
+
+################################################################################
+    def to_dict(self) -> Dict[str, Any]:
+
+        return {
+            "description": self._description,
+            "salary": self._salary,
+            "start_dt": self._start,
+            "end_dt": self._end,
+            "post_url": self._post_msg.url,
+            "candidate_id": self._candidate.id if self._candidate else None,
+            "genres": [g.value for g in self._genres],
+        }
 
 ################################################################################
     async def delete(self) -> None:
@@ -354,11 +424,6 @@ class TemporaryJobPosting(Identifiable):
                 pos_thread = await channel.create_thread(name=self.position.proper_name, embed=await self.compile(), view=post_view)
                 self.post_message = pos_thread.last_message
 
-            confirm = U.make_embed(
-                title="Temporary Job Posting Created",
-                description=f"The job posting has been created."
-            )
-            await interaction.respond(embed=confirm, ephemeral=True)
         except Exception as ex:
             error = U.make_embed(
                 title="Posting Error",
@@ -412,6 +477,7 @@ class TemporaryJobPosting(Identifiable):
         check_profile: bool,
         check_nsfw: bool = True,
         check_tags: bool = False,
+        check_mutes: bool = True
     ) -> bool:
 
         # Check user and venue mute lists
@@ -419,8 +485,9 @@ class TemporaryJobPosting(Identifiable):
             return False
 
         profile = self.bot.profile_manager.get_profile(user.id)
-        if self.venue in profile.muted_venues:
-            return False
+        if check_mutes:
+            if self.venue in profile.muted_venues:
+                return False
 
         if check_profile:
             profile_post_message = await profile.post_message
@@ -476,56 +543,35 @@ class TemporaryJobPosting(Identifiable):
             return False
 
         if check_profile:
-            print("Checking profile")
             profile_post_message = await profile.post_message
             if profile_post_message is None:
-                print("Profile post message is None")
                 return False
-            else:
-                print("Profile post message was found")
 
         if check_nsfw:
-            print("Checking NSFW")
             if self.venue.nsfw and not profile.nsfw:
-                print("NSFW preference is mismatched")
                 return False
-            else:
-                print("NSFW preference matched")
 
         if check_genres is not None:
-            print("Checking genres")
             assert len(check_genres) > 0
             if not any(genre in profile.genres for genre in check_genres):
-                print("No genres matched")
                 return False
-            else:
-                print("Genres matched")
 
         # Check if job's data center is in the user's data centers list
         if compare_data_centers:
-            print("Checking data centers")
             if not any(r.contains(self.venue.location.data_center) for r in profile.regions):
-                print("No data centers matched")
                 return False
-            else:
-                print("Data centers matched")
 
         # If comparing schedules, check if the user is available during the job's times
         if compare_schedule and check_profile:
-            print("Checking schedule")
             job_day = Weekday(self._start.weekday())
             for availability in profile.availability:
                 if availability.day == job_day:
                     start_time, end_time = self._start.time(), self._end.time()
                     print(start_time, end_time)
                     if availability.contains(start_time, end_time):
-                        print("Schedule matched")
                         return True
-                    else:
-                        print(f"{job_day.proper_name} not matched")
             return False  # If no matching availability was found
 
-        print("Schedule not checked, passing    ")
         # If not comparing schedules or none of the above conditions matched, the user is eligible
         return True
 
@@ -538,7 +584,8 @@ class TemporaryJobPosting(Identifiable):
             compare_schedule=False,
             check_profile=True,
             check_nsfw=False,
-            check_tags=False
+            check_tags=False,
+            check_mutes=False
         ):
             error = U.make_error(
                 title="Ineligible for Job",
@@ -547,6 +594,22 @@ class TemporaryJobPosting(Identifiable):
                     "Please ensure you have selected the appropriate "
                     "pingable role in the server and that your staff profile"
                     "has been completed and posted!\n"
+                )
+            )
+            await interaction.respond(embed=error, ephemeral=True)
+            return
+
+        profile = self.bot.profile_manager.get_profile(interaction.user.id)
+        if self.venue in profile.muted_venues:
+            error = U.make_error(
+                title="Muted Venue",
+                message=(
+                    "You have muted in this venue in the past, and therefore "
+                    "cannot accept this job posting."
+                ),
+                solution=(
+                    "Please contact an SPB administrator if you believe this "
+                    "is an error."
                 )
             )
             await interaction.respond(embed=error, ephemeral=True)
@@ -586,12 +649,12 @@ class TemporaryJobPosting(Identifiable):
         except Exception:
             pass
 
-        await self.bot.log.temp_job_accepted(self)
+        await self.bot.log.job_accepted(self)
 
 ################################################################################
     async def _open_thread(self, interaction: Interaction) -> Optional[Thread]:
 
-        parent_channel = await self.bot.channel_manager.internship_channel
+        parent_channel = await self.bot.channel_manager.communication_channel
         if parent_channel is None:
             error = U.make_error(
                 title="Channel Missing",
@@ -628,7 +691,7 @@ class TemporaryJobPosting(Identifiable):
             return
 
         # Log before removing the candidate
-        await self.bot.log.temp_job_canceled(self)
+        await self.bot.log.job_canceled(self)
 
         self.candidate = None
         await self.update_post_components(True)
@@ -747,6 +810,454 @@ class TemporaryJobPosting(Identifiable):
         if not view.complete or view.value is False:
             return
 
+        if self._candidate.id is not None:
+            candidate = await self.candidate
+            if candidate is None:
+                await self.delete()
+                return
+
+            prompt = U.make_embed(
+                title="Job Posting Already Accepted",
+                description=(
+                    "__**This job posting has already been accepted by a candidate.**__\n\n"
+                    
+                    f"{self.format(None, False)}\n"
+                    f"{candidate.mention} ({candidate.display_name})\n\n"
+                    
+                    "Are you *still* sure you want to remove this job posting?"
+                )
+            )
+            view = ConfirmCancelView(interaction.user)
+
+            await interaction.respond(embed=prompt, view=view)
+            await view.wait()
+
+            if not view.complete or view.value is False:
+                return
+
+            # If we reach here, the user confirmed the deletion
+            notify = U.make_embed(
+                title="Job Posting Removed",
+                description=(
+                    f"The job posting for `{self.position.proper_name}` at "
+                    f"`{self.venue.name}` has been removed by the venue owner.\n\n"
+                    
+                    f"{self.format(None, False)}"
+                )
+            )
+            try:
+                await candidate.send(embed=notify)
+            except Exception:
+                pass
+
         await self.delete()
+
+################################################################################
+    async def set_description(self, interaction: Interaction) -> None:
+
+        modal = BasicTextModal(
+            title="Set Job Description",
+            attribute="Description",
+            cur_val=self.description,
+            max_length=250,
+            multiline=True
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.description = modal.value
+        await self.update_post_components(True)
+
+################################################################################
+    async def set_salary(self, interaction: Interaction) -> None:
+
+        modal = BasicTextModal(
+            title="Set Job Salary",
+            attribute="Salary",
+            cur_val=self.salary,
+            max_length=50
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.complete:
+            return
+
+        self.salary = modal.value
+        await self.update_post_components(True)
+
+################################################################################
+    def time_status(self, time_type: TimeType) -> Embed:
+
+        desc = (
+            f"**Current Start Time:** {U.format_dt(self._start, 'f')}\n\n"
+        ) if time_type == TimeType.StartTime else (
+            f"**Current End Time:** {U.format_dt(self._end, 'f')}\n\n"
+        )
+        desc += "**Please select the time component you would like to change.**"
+
+        word = "Start" if time_type == TimeType.StartTime else "End"
+        return U.make_embed(
+            title=f"Change Temporary Job {word} Time",
+            description=desc
+        )
+
+################################################################################
+    def time_menu_status(self) -> Embed:
+
+        return U.make_embed(
+            title="Job Posting Time Menu",
+            description=(
+                f"**Current Start Time:** {U.format_dt(self._start, 'f')}\n"
+                f"**Current End Time:** {U.format_dt(self._end, 'f')}\n\n"
+
+                "**You can change the start time, end time, or both.**"
+            )
+        )
+
+################################################################################
+    async def set_schedule(self, interaction: Interaction) -> None:
+
+        prompt = self.time_menu_status()
+        view = JobTimeButtonsView(interaction.user, self)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if self._schedule_updated:
+            await self.notify_eligible_applicants()
+            self._schedule_updated = False
+
+################################################################################
+    async def set_both_times(self, interaction: Interaction) -> None:
+
+        prompt = U.make_embed(
+            title=f"Job Posting Timezone",
+            description=f"Please select the timezone for this job posting."
+        )
+        view = FroggeSelectView(interaction.user, Timezone.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        tz = U.TIMEZONE_OFFSETS[Timezone(int(view.value))]
+
+        prompt = U.make_embed(
+            title=f"Job Posting Start Time",
+            description=f"Please select the month this job posting starts in."
+        )
+        view = FroggeSelectView(interaction.user, Month.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        month = Month(int(view.value))
+
+        prompt = U.make_embed(
+            title=f"Job Posting Start Time",
+            description=f"Please select the day this job posting starts on."
+        )
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(1, month.days() + 1)]
+        view = FroggeMultiMenuSelect(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        day = int(view.value)
+
+        prompt = U.make_embed(
+            title=f"Job Posting Start Time",
+            description=(
+                f"Please select the year of this job posting's start time."
+            )
+        )
+        cur_year = datetime.now().year
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(cur_year, cur_year + 2)]
+        view = FroggeSelectView(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        year = int(view.value)
+
+        prompt = U.make_embed(
+            title=f"Job Posting Start Time",
+            description=(
+                f"Please select the hour, then minute increment of this job posting's "
+                f"start time."
+            )
+        )
+        view = TimeSelectView(interaction.user)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        hours, minutes = view.value
+        start_dt = datetime(
+            year=year,
+            month=month.value,
+            day=day,
+            hour=hours,
+            minute=minutes,
+            tzinfo=tz
+        )
+
+        options = []
+        for total_minutes in range(30, 361, 30):
+            hours = total_minutes // 60
+            leftover = total_minutes % 60
+
+            # Build a human-friendly label: e.g., "1h 30m", "30m", "6h"
+            if hours > 0 and leftover > 0:
+                label = f"{hours}h {leftover}m"
+            elif hours > 0:
+                label = f"{hours}h"
+            else:
+                label = f"{leftover}m"
+
+            options.append(SelectOption(label=label, value=str(total_minutes)))
+
+        prompt = U.make_embed(
+            title="Job Posting Length",
+            description="How long will this job posting last?"
+        )
+        view = FroggeSelectView(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        end_dt = start_dt + timedelta(minutes=int(view.value))
+
+        self._set_schedule_impl(start_dt, end_dt)
+        await self.update_post_components(True)
+
+################################################################################
+    async def poster_left(self) -> None:
+
+        candidate = await self.candidate
+        if candidate is not None:
+            notify = U.make_embed(
+                title="Job Poster Left",
+                description=(
+                    f"The job poster for `{self.position.proper_name}` at "
+                    f"`{self.venue.name}` has left the server.\n\n"
+                    
+                    f"{self.format(None, False)}\n"
+                    "The job posting will now be deleted."
+                )
+            )
+            try:
+                await candidate.send(embed=notify)
+            except Exception:
+                pass
+
+        await self.delete()
+
+################################################################################
+    async def time_menu(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        prompt = self.time_status(t_type)
+        view = JobTimeComponentView(interaction.user, self, t_type)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+################################################################################
+    async def get_tz(self, interaction: Interaction) -> Optional[ZoneInfo]:
+
+        if self._tz is not None:
+            return self._tz
+
+        prompt = U.make_embed(
+            title=f"Job Posting Timezone",
+            description=f"Please select your timezone."
+        )
+        view = FroggeSelectView(interaction.user, Timezone.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return None
+
+        self._tz = U.TIMEZONE_OFFSETS[Timezone(int(view.value))]
+        return self._tz
+
+################################################################################
+    async def set_year(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        tz = await self.get_tz(interaction)
+        if tz is None:
+            return
+
+        prompt = U.make_embed(
+            title="Job Posting Year",
+            description="Please select the year for this job posting."
+        )
+        cur_year = datetime.now().year
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(cur_year, cur_year + 2)]
+        view = FroggeSelectView(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        year = int(view.value)
+        prev_date = self._start if t_type == TimeType.StartTime else self._end
+        new_date = prev_date.astimezone(tz)
+        new_date = new_date.replace(year=year)
+        if t_type == TimeType.StartTime:
+            self._set_schedule_impl(new_date, self._end)
+        else:
+            self._set_schedule_impl(self._start, new_date)
+
+        await self.update_post_components(True)
+
+################################################################################
+    async def set_month(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        tz = await self.get_tz(interaction)
+        if tz is None:
+            return
+
+        prompt = U.make_embed(
+            title="Job Posting Month",
+            description="Please select the month for this job posting."
+        )
+        view = FroggeSelectView(interaction.user, Month.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        month = Month(int(view.value))
+        prev_date = self._start if t_type == TimeType.StartTime else self._end
+        new_date = prev_date.astimezone(tz)
+        new_date = new_date.replace(month=month.value)
+        if t_type == TimeType.StartTime:
+            self._set_schedule_impl(new_date, self._end)
+        else:
+            self._set_schedule_impl(self._start, new_date)
+
+        await self.update_post_components(True)
+
+################################################################################
+    async def set_day(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        tz = await self.get_tz(interaction)
+        if tz is None:
+            return
+
+        prompt = U.make_embed(
+            title="Job Posting Day",
+            description="Please select the day for this job posting."
+        )
+        month = Month(self._start.month)
+        options = [SelectOption(label=str(i), value=str(i)) for i in range(1, month.days() + 1)]
+        view = FroggeMultiMenuSelect(interaction.user, options)
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        day = int(view.value)
+        prev_date = self._start if t_type == TimeType.StartTime else self._end
+        new_date = prev_date.astimezone(tz)
+        new_date = new_date.replace(day=day)
+        if t_type == TimeType.StartTime:
+            self._set_schedule_impl(new_date, self._end)
+        else:
+            self._set_schedule_impl(self._start, new_date)
+
+        await self.update_post_components(True)
+
+################################################################################
+    async def set_hour(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        tz = await self.get_tz(interaction)
+        if tz is None:
+            return
+
+        prompt = U.make_embed(
+            title="Job Posting Hour",
+            description="Please select the hour for this job posting."
+        )
+        view = FroggeSelectView(interaction.user, Hours.limited_select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        hour = int(view.value)
+        prev_date = self._start if t_type == TimeType.StartTime else self._end
+        new_date = prev_date.astimezone(tz)
+        new_date = new_date.replace(hour=hour)
+        if t_type == TimeType.StartTime:
+            self._set_schedule_impl(new_date, self._end)
+        else:
+            self._set_schedule_impl(self._start, new_date)
+
+        await self.update_post_components(True)
+
+    ################################################################################
+    async def set_minute(self, interaction: Interaction, t_type: TimeType) -> None:
+
+        tz = await self.get_tz(interaction)
+        if tz is None:
+            return
+
+        prompt = U.make_embed(
+            title="Job Posting Minute",
+            description="Please select the minute for this job posting."
+        )
+        view = FroggeSelectView(interaction.user, Minutes.select_options())
+
+        await interaction.respond(embed=prompt, view=view)
+        await view.wait()
+
+        if not view.complete or view.value is False:
+            return
+
+        minute = Minutes(int(view.value)).value
+        prev_date = self._start if t_type == TimeType.StartTime else self._end
+        new_date = prev_date.astimezone(tz)
+        new_date = new_date.replace(minute=minute)
+        if t_type == TimeType.StartTime:
+            self._set_schedule_impl(new_date, self._end)
+        else:
+            self._set_schedule_impl(self._start, new_date)
+
+        await self.update_post_components(True)
 
 ################################################################################

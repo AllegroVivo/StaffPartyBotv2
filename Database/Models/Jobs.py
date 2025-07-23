@@ -19,6 +19,7 @@ class PermanentJobPostingModel(Base):
     position_id = Column(Integer, nullable=False)
     post_url = Column(String, nullable=True)
     salary = Column(String, nullable=True)
+    candidate_id = Column(BigInteger, nullable=True)
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="permanent_jobs")

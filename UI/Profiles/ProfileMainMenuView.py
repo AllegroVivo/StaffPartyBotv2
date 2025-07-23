@@ -30,6 +30,7 @@ class ProfileMainMenuView(FroggeView):
             PreviewAboutMeButton(),
             PostProfileButton(),
             ProfileProgressButton(),
+            MutedVenueReportButton(),
             CloseMessageButton()
         ]
         for btn in button_list:
@@ -174,4 +175,20 @@ class ProfileProgressButton(FroggeButton):
     async def callback(self, interaction: Interaction):
         await self.view.ctx.progress(interaction)
         
+################################################################################
+class MutedVenueReportButton(FroggeButton):
+
+    def __init__(self):
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Muted Venue Report",
+            disabled=False,
+            row=2,
+            emoji=BotEmojis.Mute
+        )
+
+    async def callback(self, interaction: Interaction):
+        await self.view.ctx.mute_list_report(interaction)
+
 ################################################################################

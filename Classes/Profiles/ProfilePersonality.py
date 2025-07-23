@@ -138,8 +138,8 @@ class ProfilePersonality(ProfileSection):
                 title=f"About {self.parent.char_name}",
                 description=self.about_me,
                 footer_text=(
-                    self.parent._main_info.url
-                    if self.parent._main_info.url is not None
+                    self.parent._main_info.custom_url
+                    if self.parent._main_info.custom_url is not None
                     else None
                 )
             ) if self.about_me is not None else None
@@ -160,9 +160,10 @@ class ProfilePersonality(ProfileSection):
 ################################################################################
     def _likes_field(self) -> EmbedField:
 
+        likes_list = "\n".join([f"- {l}" for l in self.likes])
         return EmbedField(
             name=f"{BotEmojis.Check}  __Likes__",
-            value="\n".join([f"- {l}" for l in self.likes]) if self.likes else "`Not Set`",
+            value=(likes_list + f"\n{U.draw_line(extra=14)}") if self.likes else "`Not Set`",
             inline=True
         )
 

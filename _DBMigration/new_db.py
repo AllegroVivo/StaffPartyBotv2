@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 
+from Enums import *
 from Database.Models import StaffProfileModel
 from Models import *
 ################################################################################
@@ -118,48 +119,19 @@ class NewDatabaseManager:
 ################################################################################
     def migrate_positions(self, payload: Dict[str, Any]) -> None:
 
-        print("Migrating positions...")
+        print("Caching positions...")
 
         position_data = payload["positions"]
-        requirement_data = payload["requirements"]
-
-        print("Parsing requirements...")
-        requirements = {"0": []}
-        for req in requirement_data:
-            if req[2] not in requirements.keys():
-                requirements[req[2]] = []
-            requirements[req[2]].append(req)
-
-        print("Saving global requirements...")
-        # Global requirements
-        global_requirements_data = requirements.get("0", [])
-        assert all([r[2] == "0" for r in global_requirements_data])
-        global_reqs = [RequirementModel(text=r[3]) for r in global_requirements_data]
-        global_texts = [r.text for r in global_reqs]
-        self._insert_all(global_reqs)
-        print(f"Global requirements saved: {len(global_reqs)}")
-        print("\n".join([f"- {r}" for r in global_texts]))
-
-        print("Saving positions...")
-        positions = []
         for pos in position_data:
             print(f"Saving position: {pos[2]}")
-            pos_model = PositionModel(
-                name=pos[2],
-                description=pos[6],
-                role_id=pos[3],
-            )
-            new_pos_id = self._insert_one(pos_model)
-            self._pos_relations[pos[0]] = new_pos_id
-            positions.append(new_pos_id)
-            print(f"Position saved: {pos[2]}")
-            reqs = [RequirementModel(position_id=new_pos_id, text=r[3]) for r in requirements.get(pos[0], [])]
-            req_texts = [r.text for r in reqs]
-            self._insert_all(reqs)
-            print(f"Requirements saved for position: {pos[2]}")
-            print("\n".join([f"- {r}" for r in req_texts]))
+            pos_enum = Position.General_Training
+            for member in Position:
+                if member.proper_name == pos[2]:
+                    pos_enum = member
 
-        print(f"Positions saved: {len(positions)}")
+            self._pos_relations[pos[0]] = pos_enum.value  # type: ignore
+
+        print(f"{len(self._pos_relations)} position references cached.")
 
 ################################################################################
     def migrate_profiles(self, payload: Dict[str, Any]) -> None:

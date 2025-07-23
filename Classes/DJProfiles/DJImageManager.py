@@ -101,8 +101,8 @@ class DJImageManager:
     async def set_thumbnail(self, interaction: Interaction) -> None:
 
         prompt = U.make_embed(
-            title="Set Profile Thumbnail",
-            description="Please provide the image you want to set as your thumbnail."
+            title="Set DJ Logo",
+            description="Please provide the image you want to set as your logo."
         )
         image_url = await U.wait_for_image(interaction, prompt)
         if image_url is None:
@@ -129,8 +129,8 @@ class DJImageManager:
     async def remove_thumbnail(self, interaction: Interaction) -> None:
 
         prompt = U.make_embed(
-            title="Remove Profile Thumbnail",
-            description="Are you sure you want to remove your profile thumbnail?"
+            title="Remove DJ Logo",
+            description="Are you sure you want to remove your logo from the profile?"
         )
         view = ConfirmCancelView(interaction.user)
 

@@ -29,6 +29,9 @@ class ChannelManager:
         "_welcome",
         "_internship",
         "_dj_profiles",
+        "_special_events",
+        "_services",
+        "_communication"
     )
 
 ################################################################################
@@ -44,6 +47,9 @@ class ChannelManager:
         self._welcome: LazyChannel = LazyChannel(self, None)
         self._internship: LazyChannel = LazyChannel(self, None)
         self._dj_profiles: LazyChannel = LazyChannel(self, None)
+        self._special_events: LazyChannel = LazyChannel(self, None)
+        self._services: LazyChannel = LazyChannel(self, None)
+        self._communication: LazyChannel = LazyChannel(self, None)
 
 ################################################################################
     def load_all(self, data: Dict[str, Any]) -> None:
@@ -56,6 +62,9 @@ class ChannelManager:
         self._welcome = LazyChannel(self, data.get("welcome_channel_id"))
         self._internship = LazyChannel(self, data.get("group_training_channel_id"))
         self._dj_profiles = LazyChannel(self, data.get("bg_check_channel_id"))
+        self._special_events = LazyChannel(self, data.get("special_event_channel_id"))
+        self._services = LazyChannel(self, data.get("services_channel_id"))
+        self._communication = LazyChannel(self, data.get("communication_channel_id"))
 
 ################################################################################
     @property
@@ -111,6 +120,24 @@ class ChannelManager:
         return await self._dj_profiles.get()
 
 ################################################################################
+    @property
+    async def special_events_channel(self) -> Optional[TextChannel]:
+
+        return await self._special_events.get()
+
+################################################################################
+    @property
+    async def services_channel(self) -> Optional[TextChannel]:
+
+        return await self._services.get()
+
+################################################################################
+    @property
+    async def communication_channel(self) -> Optional[TextChannel]:
+
+        return await self._communication.get()
+
+################################################################################
     def update(self) -> None:
 
         self._state.db.update.top_level(self)
@@ -127,6 +154,9 @@ class ChannelManager:
             "welcome_channel_id": self._welcome.id,
             "group_training_channel_id": self._internship.id,
             "bg_check_channel_id": self._dj_profiles.id,
+            "special_event_channel_id": self._special_events.id,
+            "services_channel_id": self._services.id,
+            "communication_channel_id": self._communication.id,
         }
 
 ################################################################################
@@ -140,6 +170,9 @@ class ChannelManager:
         welcome_channel = await self.welcome_channel
         internship_channel = await self.internship_channel
         dj_profiles_channel = await self.dj_profiles_channel
+        special_event_channel = await self.special_events_channel
+        services_channel = await self.services_channel
+        communication_channel = await self.communication_channel
 
         def _mention(channel: Optional[TextChannel]) -> str:
             return channel.mention if channel else "`Not Set`"
@@ -188,6 +221,21 @@ class ChannelManager:
                     value=_mention(dj_profiles_channel),
                     inline=False
                 ),
+                EmbedField(
+                    name="__Special Events Channel__",
+                    value=_mention(special_event_channel),
+                    inline=False
+                ),
+                EmbedField(
+                    name="__Services Channel__",
+                    value=_mention(services_channel),
+                    inline=False
+                ),
+                EmbedField(
+                    name="__Communication Channel__",
+                    value=_mention(communication_channel),
+                    inline=False
+                ),
             ]
         )
 
@@ -220,6 +268,12 @@ class ChannelManager:
                 return self._internship
             case ChannelPurpose.DJProfiles:
                 return self._dj_profiles
+            case ChannelPurpose.SpecialEvents:
+                return self._special_events
+            case ChannelPurpose.Services:
+                return self._services
+            case ChannelPurpose.Communication:
+                return self._communication
             case _:
                 raise ValueError(f"Invalid channel purpose: {purpose}")
 
@@ -228,7 +282,8 @@ class ChannelManager:
 
         restrictions = [ChannelType.forum] if _type in (
             ChannelPurpose.Venues, ChannelPurpose.Profiles, ChannelPurpose.DJProfiles,
-            ChannelPurpose.TempJobs, ChannelPurpose.PermJobs,
+            ChannelPurpose.TempJobs, ChannelPurpose.PermJobs, ChannelPurpose.SpecialEvents,
+            ChannelPurpose.Services
         ) else [ChannelType.text]
 
         prompt = U.make_embed(
@@ -270,6 +325,15 @@ class ChannelManager:
             case ChannelPurpose.DJProfiles:
                 assert isinstance(channel, ForumChannel)
                 self._dj_profiles.set(channel)
+            case ChannelPurpose.SpecialEvents:
+                assert isinstance(channel, ForumChannel)
+                self._special_events.set(channel)
+            case ChannelPurpose.Services:
+                assert isinstance(channel, ForumChannel)
+                self._services.set(channel)
+            case ChannelPurpose.Communication:
+                assert isinstance(channel, TextChannel)
+                self._communication.set(channel)
             case _:
                 raise ValueError(f"Invalid ChannelPurpose: {_type}")
 

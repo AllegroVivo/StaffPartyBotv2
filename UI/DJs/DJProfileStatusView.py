@@ -29,9 +29,11 @@ class DJProfileStatusView(FroggeView):
             ToggleNSFWButton(),
             ToggleDMPrefButton(),
             SetAboutMeButton(),
+            SetTimezoneButton(),
             LinksMenuButton(),
             ImageMenuButton(),
             SetAvailabilityButton(),
+            MutedVenueReportButton(),
             PostProfileButton(),
             CloseMessageButton()
         ]
@@ -234,6 +236,25 @@ class SetRegionsButton(FroggeButton):
         await self.view.edit_message_helper(interaction, embed=await self.view.ctx.status())
 
 ################################################################################
+class SetTimezoneButton(FroggeButton):
+
+    def __init__(self) -> None:
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Timezone",
+            disabled=False,
+            row=1
+        )
+
+    def set_attributes(self) -> None:
+        self.set_style(self.view.ctx._tz)
+
+    async def callback(self, interaction: Interaction) -> None:
+        await self.view.ctx.set_timezone(interaction)
+        await self.view.edit_message_helper(interaction, embed=await self.view.ctx.status())
+
+################################################################################
 class ToggleDMPrefButton(FroggeButton):
 
     def __init__(self) -> None:
@@ -281,5 +302,21 @@ class PostProfileButton(FroggeButton):
 
     async def callback(self, interaction: Interaction) -> None:
         await self.view.ctx.post(interaction)
+
+################################################################################
+class MutedVenueReportButton(FroggeButton):
+
+    def __init__(self):
+
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label="Muted Venue Report",
+            disabled=False,
+            row=2,
+            emoji=BotEmojis.Mute
+        )
+
+    async def callback(self, interaction: Interaction):
+        await self.view.ctx.mute_list_report(interaction)
 
 ################################################################################

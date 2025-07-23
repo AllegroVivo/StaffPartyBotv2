@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Dict, List
 
-from discord import Interaction, User, Embed, ForumChannel
+from discord import Interaction, User, Embed, ForumChannel, Thread
 
 from Classes.Common import ObjectManager
 from .DJProfile import DJProfile
@@ -91,5 +91,22 @@ class DJManager(ObjectManager):
 
         profile = self.get_profile(interaction.user.id)
         await profile.menu(interaction)
+
+################################################################################
+    async def on_member_leave(self, member) -> bool:
+
+        for profile in self._managed:
+            if profile.user_id == member.id:
+                post_message = await profile.post_message
+                try:
+                    if isinstance(post_message.channel, Thread):
+                        await post_message.channel.delete()
+                    else:
+                        await post_message.delete()
+                    return True
+                except:
+                    pass
+
+        return False
 
 ################################################################################

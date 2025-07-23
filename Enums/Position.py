@@ -14,7 +14,7 @@ class Position(FroggeEnum):
     Exotic_Dancer = 5
     Gamba = 6
     Greeter = 7
-    Host = 8
+    Host_Dancer = 8
     Manager = 9
     PF_Attendant = 10
     Photographer = 11
@@ -36,9 +36,9 @@ class Position(FroggeEnum):
 
 ################################################################################
     @classmethod
-    def limited_select_options(cls) -> List[SelectOption]:
+    def limited_select_options(cls, exclude: list) -> List[SelectOption]:
 
-        return [p.select_option for p in cls if p != cls.General_Training]
+        return [p.select_option for p in cls if p not in exclude]
 
 ################################################################################
     @property

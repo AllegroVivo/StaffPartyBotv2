@@ -1,9 +1,6 @@
 from discord import SelectOption
 
 from ._Enum import FroggeEnum
-from discord import SelectOption
-
-from ._Enum import FroggeEnum
 ################################################################################
 class Timezone(FroggeEnum):
 

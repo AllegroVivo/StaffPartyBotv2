@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from discord import Role, Embed, EmbedField, Interaction, SelectOption, Member, User
+from discord import Role, Embed, EmbedField, Interaction, SelectOption, Member, User, ComponentType
 
 from Classes.Common import LazyRole
 from Enums import RoleType
-from UI.Common import FroggeMultiMenuSelect
+from UI.Common import FroggeMultiMenuSelect, FroggeSelectView
 from UI.Core import RoleManagerMenuView
 from Utilities import Utilities as U
 
@@ -25,7 +25,6 @@ class RoleManager:
         "_staff_unvalidated",
         "_venue_management",
         "_trainee",
-        "_trainee_hiatus"
     )
 
 ################################################################################
@@ -37,7 +36,6 @@ class RoleManager:
         self._staff_unvalidated: LazyRole = LazyRole(self, None)
         self._venue_management: LazyRole = LazyRole(self, None)
         self._trainee: LazyRole = LazyRole(self, None)
-        self._trainee_hiatus: LazyRole = LazyRole(self, None)
 
 ################################################################################
     def load_all(self, payload: Dict[str, Any]) -> None:
@@ -46,7 +44,6 @@ class RoleManager:
         self._staff_unvalidated = LazyRole(self, payload.get("staff_pending_role_id"))
         self._venue_management = LazyRole(self, payload.get("venue_management_role_id"))
         self._trainee = LazyRole(self, payload.get("trainee_role_id"))
-        self._trainee_hiatus = LazyRole(self, payload.get("trainee_hiatus_role_id"))
 
 ################################################################################
     @property
@@ -79,12 +76,6 @@ class RoleManager:
         return await self._trainee.get()
 
 ################################################################################
-    @property
-    async def trainee_hiatus_role(self) -> Optional[Role]:
-
-        return await self._trainee_hiatus.get()
-
-################################################################################
     def update(self) -> None:
 
         self.bot.db.update.top_level(self)
@@ -97,7 +88,6 @@ class RoleManager:
             "staff_pending_role_id": self._staff_unvalidated.id,
             "venue_management_role_id": self._venue_management.id,
             "trainee_role_id": self._trainee.id,
-            "trainee_hiatus_role_id": self._trainee_hiatus.id
         }
 
 ################################################################################
@@ -107,7 +97,6 @@ class RoleManager:
         staff_pending_role = await self.staff_pending_role
         venue_management_role = await self.venue_management_role
         trainee_role = await self.trainee_role
-        trainee_hiatus_role = await self.trainee_hiatus_role
 
         return U.make_embed(
             title="TrainerBot Roles Status",
@@ -133,11 +122,6 @@ class RoleManager:
                     value=trainee_role.mention if trainee_role else "`Not Set`",
                     inline=False
                 ),
-                EmbedField(
-                    name="__Trainee Hiatus__",
-                    value=trainee_hiatus_role.mention if trainee_hiatus_role else "`Not Set`",
-                    inline=False
-                )
             ]
         )
 
@@ -162,8 +146,6 @@ class RoleManager:
                 return self._venue_management
             case RoleType.Trainee:
                 return self._trainee
-            case RoleType.TraineeHiatus:
-                return self._trainee_hiatus
             case _:
                 raise ValueError(f"Invalid RoleType: {rtype}")
 
@@ -174,12 +156,7 @@ class RoleManager:
             title="Role Update",
             description=f"Please select the role you would like to set as the `{_type.proper_name}`."
         )
-        options = [
-            SelectOption(label=r.name, value=str(r.id))
-            for r in sorted(interaction.guild.roles, key=lambda r: r.position)
-            if r.name != "@everyone"
-        ]
-        view = FroggeMultiMenuSelect(interaction.user, options)
+        view = FroggeSelectView(interaction.user, None, select_type=ComponentType.role_select)  # type: ignore
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -187,7 +164,7 @@ class RoleManager:
         if not view.complete or view.value is None:
             return
 
-        role = interaction.guild.get_role(int(view.value))
+        role = view.value
 
         match _type:
             case RoleType.StaffMain:
@@ -198,8 +175,6 @@ class RoleManager:
                 self._venue_management.set(role)
             case RoleType.Trainee:
                 self._trainee.set(role)
-            case RoleType.TraineeHiatus:
-                self._trainee_hiatus.set(role)
             case _:
                 raise ValueError(f"Invalid RoleType: {_type}")
 

@@ -17,14 +17,14 @@ class AccentColorModal(BasicTextModal):
             title="Set Accent Color",
             attribute="Accent Color HEX",
             cur_val=str(cur_val).upper() if cur_val is not None else None,
-            example="e.g. '#4ABC23'",
+            example="e.g. '#4ABC23' or '#623ABC'",
             min_length=6,
             max_length=7,
             required=False,
             instructions=InstructionsInfo(
                 placeholder="Enter your desired accent color.",
                 value=(
-                    "Enter the 6-character HEX code for your desired accent color.\n"
+                    "Enter the 6-character HEX code for your desired accent color. "
                     "Google 'Color Picker' if you have questions."
                 )
             )

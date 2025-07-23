@@ -51,6 +51,7 @@ class StaffProfileModel(Base):
     jobs = Column(ARRAY(String), nullable=False, server_default="{}")
     rates = Column(String, nullable=True)
     position_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
+    training_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
     dm_pref = Column(Boolean, nullable=False, server_default="false")
     timezone = Column(String, nullable=True)
     # At A Glance
@@ -73,7 +74,10 @@ class StaffProfileModel(Base):
     main_image_url = Column(String, nullable=True)
     # Other
     muted_venue_ids = Column(ARRAY(Integer), nullable=False, server_default="{}")
-    hiatus = Column(Boolean, nullable=False, server_default="false")
+    bg_check_done = Column(Boolean, nullable=False, server_default="false")
+    rp_level = Column(Integer, nullable=True)
+    venue_tags = Column(ARRAY(String), nullable=False, server_default="{}")
+    nsfw_pref = Column(Boolean, nullable=False, server_default="false")
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="profiles", passive_deletes=True)

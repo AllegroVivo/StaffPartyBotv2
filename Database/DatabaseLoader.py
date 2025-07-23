@@ -8,7 +8,6 @@ from .Schemas import *
 
 if TYPE_CHECKING:
     from Database import Database
-    from pydantic import BaseModel
 ################################################################################
 
 __all__ = ("DatabaseLoader",)
@@ -45,6 +44,7 @@ class DatabaseLoader:
         with self._parent._get_db() as db:
             top_level = db.query(TopLevelDataModel).options(
                 selectinload(TopLevelDataModel.venues).selectinload(VenueModel.schedules),
+                selectinload(TopLevelDataModel.venues).selectinload(VenueModel.special_events),
                 selectinload(TopLevelDataModel.bg_checks).selectinload(BGCheckModel.venues),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.additional_images),
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
@@ -63,7 +63,10 @@ class DatabaseLoader:
                     venues=[
                         VenueSchema.model_validate(
                             v,
-                            context={"schedules": map_schema(VenueScheduleSchema, v.schedules)}
+                            context={
+                                "schedules": map_schema(VenueScheduleSchema, v.schedules),
+                                "special_events": map_schema(SpecialEventSchema, v.special_events)
+                            }
                         ) for v in top_level.venues
                     ]
                 ),
@@ -101,6 +104,9 @@ class DatabaseLoader:
                             context={"availability": map_schema(DJAvailabilitySchema, prof.availability)}
                         ) for prof in top_level.dj_profiles
                     ]
+                ),
+                service_manager=ServiceRequestManagerSchema(
+                    service_requests=map_schema(ServiceRequestSchema, top_level.service_requests),
                 )
             ).model_dump()
 

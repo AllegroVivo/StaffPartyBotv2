@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from discord import Interaction, ButtonStyle
+from discord import Interaction, ButtonStyle, Embed
 from discord.ui import Button, View
 
 from Assets import BotEmojis
@@ -40,13 +40,15 @@ class VenueMuteButton(Button):
     async def callback(self, interaction: Interaction):
         venue: Venue = self.view.venue
         profile = interaction.client.profile_manager.get_profile(interaction.user.id)  # type: ignore
-        dj_profile = interaction.client.dj_profile_manager[interaction.user.id]  # type: ignore
+        profile_flag = profile.mute_venue(venue)
 
-        flag = False
-        if profile is not None:
-            await profile.mute_venue(interaction, venue)
-            flag = True
-        if dj_profile is not None:
-            await dj_profile.venue_mute(interaction, venue, flag)
+        confirm = Embed(
+            title="Venue Mute Toggle",
+            description=(
+                f"Venue pings for {venue.name} have been "
+                f"{'enabled' if profile_flag else 'disabled'}.\n\n"
+            )
+        )
+        await interaction.respond(embed=confirm, ephemeral=True)
     
 ################################################################################

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, List
 
 import cloudinary
 import cloudinary.uploader
@@ -10,8 +10,10 @@ from discord.abc import GuildChannel
 from dotenv import load_dotenv
 
 from Classes.BackgroundChecks.BGCheckManager import BGCheckManager
+from Classes.DJProfiles.DJManager import DJManager
 from Classes.Jobs.JobPostingManager import JobPostingManager
 from Classes.Profiles.ProfileManager import ProfileManager
+from Classes.Services.ServicesManager import ServicesManager
 from Classes.Venues.VenueManager import VenueManager
 from Classes.Welcome.WelcomeManager import WelcomeManager
 from Classes.XIVVenues.XIVVenuesClient import XIVVenuesClient
@@ -20,7 +22,6 @@ from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
 from .RoleManager import RoleManager
 from .SPBLogger import SPBLogger
-from Classes.DJProfiles.DJManager import DJManager
 
 if TYPE_CHECKING:
     from Classes import GuildData
@@ -45,16 +46,21 @@ class StaffPartyBot(Bot):
         "_jobs_mgr",
         "_welcome_mgr",
         "_dj_mgr",
+        "_services_mgr",
+        "_member_cache",
     )
-
-    IMAGE_DUMP = 991902526188302427
-    SPB_ID = 1104515062187708525
-
-    MAX_SELECT_OPTIONS = 25
-    MAX_MULTI_SELECT_OPTIONS = 80
 
     load_dotenv()
     DEBUG = os.getenv("DEBUG") == "True"
+
+    IMAGE_DUMP = 991902526188302427
+    if DEBUG:
+        SPB_ID = 1273061765831458866 # Kupo Nutz
+    else:
+        SPB_ID = 1104515062187708525 # SPB
+
+    MAX_SELECT_OPTIONS = 25
+    MAX_MULTI_SELECT_OPTIONS = 80
 
     VENUE_ETIQUETTE = (
         "https://canary.discord.com/channels/955933227372122173/"
@@ -71,6 +77,7 @@ class StaffPartyBot(Bot):
         super().__init__(*args, **kwargs)
 
         self._img_dump: TextChannel = None  # type: ignore
+        self._member_cache: List[Member] = []
 
         self._guild_mgr: GuildManager = GuildManager(self)
         self._db: Database = Database(self)
@@ -86,6 +93,7 @@ class StaffPartyBot(Bot):
         self._jobs_mgr: JobPostingManager = JobPostingManager(self)
         self._welcome_mgr: WelcomeManager = WelcomeManager(self)
         self._dj_mgr: DJManager = DJManager(self)
+        self._services_mgr: ServicesManager = ServicesManager(self)
 
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
@@ -146,6 +154,8 @@ class StaffPartyBot(Bot):
         await self._jobs_mgr.load_all(payload["jobs_manager"])
         print("Loading DJ Profiles...")
         await self._dj_mgr.load_all(payload["dj_manager"])
+        print("Loading services...")
+        await self._services_mgr.load_all(payload["service_manager"])
 
         print("Finalizing load...")
         await self._finalize_load()
@@ -235,6 +245,12 @@ class StaffPartyBot(Bot):
         return self._dj_mgr
 
 ################################################################################
+    @property
+    def services_manager(self) -> ServicesManager:
+
+        return self._services_mgr
+
+################################################################################
     async def dump_image(self, image: Attachment) -> str:
 
         file = await image.to_file()
@@ -269,24 +285,28 @@ class StaffPartyBot(Bot):
         if ret is not None:
             return ret
 
-        for guild in self.guilds:
-            try:
-                return await guild.fetch_channel(channel_id)
-            except NotFound:
-                continue
+        try:
+            return await self.fetch_channel(channel_id)
+        except:
+            return None
 
 ################################################################################
     async def get_or_fetch_role(self, role_id: int) -> Optional[GuildChannel]:
 
-        ret = self.get_channel(role_id)
-        if ret is not None:
-            return ret
+        for guild in self.guilds:
+            role = guild.get_role(role_id)
+            if role is not None:
+                return role  # type: ignore
 
         for guild in self.guilds:
             try:
-                return await guild._fetch_role(role_id)  # type: ignore
+                role = await guild._fetch_role(role_id)
+                if role is not None:
+                    return role  # type: ignore
             except NotFound:
                 continue
+
+        return None
 
 ################################################################################
     async def get_or_fetch_member_or_user(self, user_id: int) -> Optional[Union[Member, User]]:
@@ -311,7 +331,7 @@ class StaffPartyBot(Bot):
         if channel := await self.get_or_fetch_channel(int(url_parts[-2])):
             try:
                 return await channel.fetch_message(int(url_parts[-1]))  # type: ignore
-            except NotFound:
+            except:
                 return None
 
 ################################################################################
@@ -332,21 +352,36 @@ class StaffPartyBot(Bot):
 ################################################################################
     async def on_member_leave(self, member: Member) -> None:
 
-        venue_deleted = await self.venue_manager.on_member_leave(member)
         profile_deleted = await self.profile_manager.on_member_leave(member)
+        dj_profile_deleted = await self.dj_profile_manager.on_member_leave(member)
+        jobs_deleted, jobs_canceled = await self.jobs_manager.on_member_leave(member)
+        venue_deleted = await self.venue_manager.on_member_leave(member)
 
         await self.log.on_member_leave(
             member=member,
             venue_deleted=venue_deleted,
             profile_deleted=profile_deleted,
-            jobs_deleted=0,
-            jobs_canceled=0
+            dj_profile_deleted=dj_profile_deleted,
+            jobs_deleted=jobs_deleted,
+            jobs_canceled=jobs_canceled
         )
 
 ################################################################################
     async def on_member_join(self, member: Member) -> None:
 
+        if member in self._member_cache:
+            return
+
+        self._member_cache.append(member)
         await self.log.on_member_join(member)
-        await self._welcome_mgr.welcome.start(member)
+        try:
+            await self._welcome_mgr.welcome.start(member)
+        except RuntimeError:
+            pass
+
+################################################################################
+    def clear_member_cache(self) -> None:
+
+        self._member_cache = []
 
 ################################################################################

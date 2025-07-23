@@ -45,11 +45,6 @@ class DatabaseDeleter:
         self._delete_record(Models.VenueScheduleModel, hours_id)
 
 ################################################################################
-    def requirement(self, req_id: int) -> None:
-
-        self._delete_record(Models.RequirementModel, req_id)
-
-################################################################################
     def bg_check_venue(self, venue_id: int) -> None:
 
         self._delete_record(Models.BGCheckVenueModel, venue_id)
@@ -88,5 +83,15 @@ class DatabaseDeleter:
     def dj_profile_availability(self, avail_id: int) -> None:
 
         self._delete_record(Models.DJProfileAvailabilityModel, avail_id)
+
+################################################################################
+    def special_event(self, event_id: int) -> None:
+
+        self._delete_record(Models.SpecialEventModel, event_id)
+
+################################################################################
+    def service_request(self, request_id: int) -> None:
+
+        self._delete_record(Models.ServiceRequestModel, request_id)
 
 ################################################################################

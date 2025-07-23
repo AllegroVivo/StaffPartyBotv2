@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from discord import Cog
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 from discord.ext import tasks
 
 if TYPE_CHECKING:
@@ -21,7 +21,8 @@ class Internal(Cog):
         await self.bot.load_all()
 
         print("Starting tasks...")
-        self.cull_job_postings.start()
+        self.manager_routines.start()
+        self.clear_member_cache_routine.start()
         
         print(f"{self.bot.__class__.__name__} Online!")
 
@@ -38,11 +39,26 @@ class Internal(Cog):
         await self.bot.on_member_leave(member)
         
 ################################################################################
-    @tasks.loop(minutes=30)
-    async def cull_job_postings(self) -> None:
+    @tasks.loop(minutes=5)
+    async def clear_member_cache_routine(self) -> None:
+
+        self.bot.clear_member_cache()
+
+################################################################################
+    @tasks.loop(minutes=1)
+    async def manager_routines(self) -> None:
 
         await self.bot.jobs_manager.cull_postings()
-        
+        await self.bot.jobs_manager.check_revisits()
+
+        await self.bot.services_manager.check_revisits()
+
+################################################################################
+    @tasks.loop(hours=24)
+    async def update_xiv_venus(self) -> None:
+
+        await self.bot.venue_manager.update_all_from_xiv()
+
 ################################################################################
 def setup(bot: StaffPartyBot) -> None:
 

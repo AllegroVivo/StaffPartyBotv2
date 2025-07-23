@@ -82,8 +82,23 @@ class DatabaseUpdater:
         self._update_record(Models.PermanentJobPostingModel, job.to_dict(), id=job.id)
 
 ################################################################################
+    def temporary_job(self, job: TemporaryJobPosting) -> None:
+
+        self._update_record(Models.TemporaryJobPostingModel, job.to_dict(), id=job.id)
+
+################################################################################
     def dj_profile(self, dj_profile: DJProfile) -> None:
 
         self._update_record(Models.DJProfileModel, dj_profile.to_dict(), user_id=dj_profile.id)
+
+################################################################################
+    def special_event(self, se: SpecialEvent) -> None:
+
+        self._update_record(Models.SpecialEventModel, se.to_dict(), id=se.id)
+
+################################################################################
+    def service_request(self, sr: ServiceRequest) -> None:
+
+        self._update_record(Models.ServiceRequestModel, sr.to_dict(), id=sr.id)
 
 ################################################################################

@@ -10,6 +10,8 @@ from .FroggeSelectView import FroggeSelectView
 from .FroggeView import FroggeView
 from .Frogginator import Frogginator
 from .ChannelSelectView import ChannelSelectView
+from .ConfirmCancelView2 import ConfirmCancelView2
 from .InstructionsInfo import InstructionsInfo
 from .TimeSelectView import TimeSelectView
+from .RevisitItemView import RevisitItemView
 ################################################################################
