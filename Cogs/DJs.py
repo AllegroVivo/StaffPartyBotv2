@@ -23,7 +23,6 @@ class DJOperations(Cog):
     djs = SlashCommandGroup(
         name="dj",
         description="Commands for DJ-related tasks and queries.",
-        contexts=[InteractionContextType.guild]
     )
 
 ################################################################################

@@ -23,7 +23,6 @@ class Services(Cog):
     services = SlashCommandGroup(
         name="services",
         description="Commands for service related tasks and queries.",
-        contexts=[InteractionContextType.guild]
     )
 
 ################################################################################

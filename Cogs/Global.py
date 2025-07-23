@@ -25,7 +25,6 @@ class Global(Cog):
     @slash_command(
         name="help",
         description="Get help with using the bot.",
-        contexts=[InteractionContextType.guild]
     )
     async def help_menu(self, ctx: ApplicationContext) -> None:
 
@@ -35,7 +34,6 @@ class Global(Cog):
     @slash_command(
         name="etiquette",
         description="Get the Venue Etiquette Guide.",
-        contexts=[InteractionContextType.guild]
     )
     async def venue_etiquette(self, ctx: ApplicationContext) -> None:
 

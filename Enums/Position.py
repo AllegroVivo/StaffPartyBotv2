@@ -51,40 +51,42 @@ class Position(FroggeEnum):
     def description(self) -> str:
 
         if self.value == 0:
-            return ""
+            ret = "Get general knowledge on venue environment and role particularities."
         elif self.value == 1:
-            return ""
+            ret = "Provides theme-based or general music to entertain guest with a selection of songs."
         elif self.value == 2:
-            return ""
+            ret = "Engage guests and serve drinks using emotes and role-play."
         elif self.value == 3:
-            return ""
+            ret = "(NSFW) Offers scheduled erotic role-play services in a consensual environment."
         elif self.value == 4:
-            return ""
+            ret = "Provide theme-based or general music in streams scheduled with management."
         elif self.value == 5:
-            return ""
+            ret = "(NSFW) Offers lap dances in designated places with emotes and role-play conversation."
         elif self.value == 6:
-            return ""
+            ret = "Offers various games of chance with set amounts of gils and house rules."
         elif self.value == 7:
-            return ""
+            ret = "Gives patron venue information provided by venue management."
         elif self.value == 8:
-            return ""
+            ret = "Engage guests; provide company and information about the venue."
         elif self.value == 9:
-            return ""
+            ret = "Coordinate different levels of venue services and support staff, DJs and patrons."
         elif self.value == 10:
-            return ""
+            ret = "Keeps up a scheduled party finder containing venue information provided by venue management."
         elif self.value == 11:
-            return ""
+            ret = "Takes venue snap shots or more complex gpose of patrons to display in the venue discord."
         elif self.value == 12:
-            return ""
+            ret = "Provide a safe, confidential space to promote an intimate scheduled companionship."
         elif self.value == 13:
-            return ""
+            ret = "Can fill various roles. Maintains immersion and narrative while interacting with patrons"
         elif self.value == 14:
-            return ""
+            ret = "Encourages proper venue etiquette while managing VIP (sales & services)."
         elif self.value == 15:
-            return ""
+            ret = "Travels to each main city-state of each world to shout premade announcements."
         elif self.value == 16:
-            return ""
+            ret = "Offers to read the drawn cards and provide insights about the possible meaning they hold."
         else:
-            return "No description configured."
+            ret = "No description configured."
+
+        return ret[:100]  # Limit description to 100 characters
 
 ################################################################################

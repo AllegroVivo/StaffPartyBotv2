@@ -803,7 +803,10 @@ class Utilities:
         # Handle the case where a column might be empty
         for i in range(columns):
             if not column_strs[i]:
-                column_strs[i] = "`No Items`"
+                if i == 0:
+                    column_strs[i] = "`No Items`"
+                else:
+                    column_strs[i] = "`-`"
 
         return column_strs
 

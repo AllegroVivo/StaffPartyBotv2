@@ -23,7 +23,6 @@ class Staff(Cog):
     staff = SlashCommandGroup(
         name="staff",
         description="Commands for trainee-related tasks and queries.",
-        contexts=[InteractionContextType.guild]
     )
 
 ################################################################################

@@ -18,7 +18,6 @@ class Venues(Cog):
     venues = SlashCommandGroup(
         name="venue",
         description="Commands for venue- and internship-related tasks and queries.",
-        # contexts=[InteractionContextType.guild, InteractionContextType.bot_dm]
     )
 
 ################################################################################
