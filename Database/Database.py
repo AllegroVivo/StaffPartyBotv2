@@ -41,7 +41,7 @@ class Database:
         self._engine: Engine = create_engine(
             os.getenv("DEVELOPMENT_DATABASE_URL")
             if os.getenv("DEBUG") == "True"
-            else os.getenv("DATABASE_URL"),
+            else os.getenv("PRODUCTION_DATABASE_URL"),
             pool_size=10,
             max_overflow=0,
             pool_pre_ping=True,
