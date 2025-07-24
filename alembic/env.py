@@ -17,7 +17,7 @@ load_dotenv()
 DATABASE_URL = (
     os.getenv("DEVELOPMENT_DATABASE_URL")
     if os.getenv("DEBUG") == "True"
-    else os.getenv("DATABASE_URL")
+    else os.getenv("PRODUCTION_DATABASE_URL")
 )
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
