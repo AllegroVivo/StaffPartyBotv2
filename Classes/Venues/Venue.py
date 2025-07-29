@@ -590,6 +590,12 @@ class Venue(ManagedObject):
         if post_message is None:
             return
 
+        if post_message.channel.archived:
+            try:
+                await post_message.channel.send("Hey Ur Cute~", delete_after=0.1)
+            except:
+                return
+
         if status and not update_view:
             await post_message.edit(embed=await self.status(post=True))
             return
