@@ -48,6 +48,7 @@ class StaffPartyBot(Bot):
         "_dj_mgr",
         "_services_mgr",
         "_member_cache",
+        "_loaded",
     )
 
     load_dotenv()
@@ -55,9 +56,9 @@ class StaffPartyBot(Bot):
 
     IMAGE_DUMP = 991902526188302427
     if DEBUG:
-        SPB_ID = 1273061765831458866 # Kupo Nutz
+        SPB_ID = 1273061765831458866  # Kupo Nutz
     else:
-        SPB_ID = 1104515062187708525 # SPB
+        SPB_ID = 1104515062187708525  # SPB
 
     MAX_SELECT_OPTIONS = 25
     MAX_MULTI_SELECT_OPTIONS = 80
@@ -95,6 +96,8 @@ class StaffPartyBot(Bot):
         self._dj_mgr: DJManager = DJManager(self)
         self._services_mgr: ServicesManager = ServicesManager(self)
 
+        self._loaded: bool = False
+
 ################################################################################
     def __getitem__(self, guild_id: int) -> GuildData:
 
@@ -123,23 +126,6 @@ class StaffPartyBot(Bot):
         print("Initializing logger...")
         await self._logger.load_all()
 
-        print("Initializing guilds data...")
-        # guild_ids = []
-        # for guild in self.guilds:
-        #     await self._guild_mgr.init_guild(guild)
-        #     guild_ids.append(guild.id)
-        #
-        # for data in payload["guilds"]:
-        #     guild_data = self[data["id"]]
-        #     if guild_data is None:
-        #         continue
-        #     await guild_data.load_all(data["data"])
-        #     guild_ids.remove(guild_data.guild_id)
-        #
-        # # Add any new guilds to the database
-        # for gid in guild_ids:
-        #     self.db.insert.guild(self.get_guild(gid))
-
         print("Loading channel & role managers...")
         self._channel_mgr.load_all(payload["channel_manager"])
         self._role_mgr.load_all(payload["role_manager"])
@@ -160,6 +146,7 @@ class StaffPartyBot(Bot):
         print("Finalizing load...")
         await self._finalize_load()
 
+        self._loaded = True
         print("Done!")
 
 ################################################################################
@@ -249,6 +236,15 @@ class StaffPartyBot(Bot):
     def services_manager(self) -> ServicesManager:
 
         return self._services_mgr
+
+################################################################################
+    async def is_loaded(self, interaction: Interaction) -> bool:
+
+        if self._loaded:
+            return True
+
+        await interaction.respond("The bus is still fueling, please wait a moment...", ephemeral=True)
+        return False
 
 ################################################################################
     async def dump_image(self, image: Attachment) -> str:

@@ -35,6 +35,9 @@ class Admin(Cog):
     )
     async def set_channels(self, ctx: ApplicationContext) -> None:
 
+        if not self.bot.is_loaded(ctx.interaction):
+            return
+
         await self.bot.channel_manager.main_menu(ctx.interaction)
 
 ################################################################################
@@ -43,6 +46,9 @@ class Admin(Cog):
         description="Set roles for server operations."
     )
     async def set_roles(self, ctx: ApplicationContext) -> None:
+
+        if not self.bot.is_loaded(ctx.interaction):
+            return
 
         await self.bot.role_manager.main_menu(ctx.interaction)
 
@@ -62,6 +68,9 @@ class Admin(Cog):
         )
     ) -> None:
 
+        if not self.bot.is_loaded(ctx.interaction):
+            return
+
         await self.bot.venue_manager.remove_venue(ctx.interaction, name)
 
 ################################################################################
@@ -79,6 +88,9 @@ class Admin(Cog):
             required=True
         )
     ) -> None:
+
+        if not self.bot.is_loaded(ctx.interaction):
+            return
 
         await self.bot.bg_check_manager.staff_experience(ctx.interaction, user)
 
