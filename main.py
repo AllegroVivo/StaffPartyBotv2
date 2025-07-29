@@ -14,14 +14,13 @@ DEBUG = os.getenv("DEBUG") == "True"
 ################################################################################
 
 bot = StaffPartyBot(
-    description="Staff Party Bot - Honk Honk!",
+    description="Staff Party Bus - Honk Honk!",
     intents=Intents.all(),
-    # debug_guilds=[
-    #     955933227372122173,  # Bot Resources
-    #     # 1104515062187708525,  # Staff Party Bus
-    #     1273061765831458866,  # Kupo Nutz
-    # ] if DEBUG else None
-    debug_guilds=None
+    debug_guilds=[
+        955933227372122173,  # Bot Resources
+        1104515062187708525,  # Staff Party Bus
+        1273061765831458866,  # Kupo Nutz
+    ] if DEBUG else None
 )
 
 ################################################################################
