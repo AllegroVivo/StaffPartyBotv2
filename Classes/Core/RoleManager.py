@@ -24,7 +24,6 @@ class RoleManager:
         "_staff_main",
         "_staff_unvalidated",
         "_venue_management",
-        "_trainee",
     )
 
 ################################################################################
@@ -35,7 +34,6 @@ class RoleManager:
         self._staff_main: LazyRole = LazyRole(self, None)
         self._staff_unvalidated: LazyRole = LazyRole(self, None)
         self._venue_management: LazyRole = LazyRole(self, None)
-        self._trainee: LazyRole = LazyRole(self, None)
 
 ################################################################################
     def load_all(self, payload: Dict[str, Any]) -> None:
@@ -43,7 +41,6 @@ class RoleManager:
         self._staff_main = LazyRole(self, payload.get("staff_role_id"))
         self._staff_unvalidated = LazyRole(self, payload.get("staff_pending_role_id"))
         self._venue_management = LazyRole(self, payload.get("venue_management_role_id"))
-        self._trainee = LazyRole(self, payload.get("trainee_role_id"))
 
 ################################################################################
     @property
@@ -70,12 +67,6 @@ class RoleManager:
         return await self._venue_management.get()
 
 ################################################################################
-    @property
-    async def trainee_role(self) -> Optional[Role]:
-
-        return await self._trainee.get()
-
-################################################################################
     def update(self) -> None:
 
         self.bot.db.update.top_level(self)
@@ -87,7 +78,6 @@ class RoleManager:
             "staff_role_id": self._staff_main.id,
             "staff_pending_role_id": self._staff_unvalidated.id,
             "venue_management_role_id": self._venue_management.id,
-            "trainee_role_id": self._trainee.id,
         }
 
 ################################################################################
@@ -96,7 +86,6 @@ class RoleManager:
         staff_role = await self.staff_main_role
         staff_pending_role = await self.staff_pending_role
         venue_management_role = await self.venue_management_role
-        trainee_role = await self.trainee_role
 
         return U.make_embed(
             title="TrainerBot Roles Status",
@@ -115,11 +104,6 @@ class RoleManager:
                 EmbedField(
                     name="__Venue Management__",
                     value=venue_management_role.mention if venue_management_role else "`Not Set`",
-                    inline=False
-                ),
-                EmbedField(
-                    name="__Trainee__",
-                    value=trainee_role.mention if trainee_role else "`Not Set`",
                     inline=False
                 ),
             ]
@@ -144,8 +128,6 @@ class RoleManager:
                 return self._staff_unvalidated
             case RoleType.VenueManagement:
                 return self._venue_management
-            case RoleType.Trainee:
-                return self._trainee
             case _:
                 raise ValueError(f"Invalid RoleType: {rtype}")
 
@@ -173,8 +155,6 @@ class RoleManager:
                 self._staff_unvalidated.set(role)
             case RoleType.VenueManagement:
                 self._venue_management.set(role)
-            case RoleType.Trainee:
-                self._trainee.set(role)
             case _:
                 raise ValueError(f"Invalid RoleType: {_type}")
 

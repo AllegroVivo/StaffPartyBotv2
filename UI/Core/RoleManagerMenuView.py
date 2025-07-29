@@ -24,8 +24,6 @@ class RoleManagerMenuView(FroggeView):
             UpdateRoleButton(RoleType.StaffMain, 0),
             UpdateRoleButton(RoleType.StaffNotValidated, 0),
             UpdateRoleButton(RoleType.VenueManagement, 0),
-            UpdateRoleButton(RoleType.Trainee, 1),
-            UpdateRoleButton(RoleType.TraineeHiatus, 1),
             CloseMessageButton()
         ]
         for btn in button_list:
