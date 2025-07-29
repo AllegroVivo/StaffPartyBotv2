@@ -32,6 +32,9 @@ class DJOperations(Cog):
     )
     async def staff_profile(self, ctx: ApplicationContext) -> None:
 
+        if not self.bot.is_loaded(ctx.interaction):
+            return
+
         await self.bot.dj_profile_manager.user_menu(ctx.interaction)
 
 ################################################################################
