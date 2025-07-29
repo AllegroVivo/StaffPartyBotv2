@@ -28,7 +28,7 @@ class Global(Cog):
     )
     async def help_menu(self, ctx: ApplicationContext) -> None:
 
-        if not self.bot.is_loaded(ctx.interaction):
+        if not await self.bot.is_loaded(ctx.interaction):
             return
 
         await HelpMessage(self.bot).menu(ctx.interaction)
@@ -40,7 +40,7 @@ class Global(Cog):
     )
     async def venue_etiquette(self, ctx: ApplicationContext) -> None:
 
-        if not self.bot.is_loaded(ctx.interaction):
+        if not await self.bot.is_loaded(ctx.interaction):
             return
 
         await self.bot.venue_etiquette(ctx.interaction)

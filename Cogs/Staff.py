@@ -32,7 +32,7 @@ class Staff(Cog):
     )
     async def staff_profile(self, ctx: ApplicationContext) -> None:
 
-        if not self.bot.is_loaded(ctx.interaction):
+        if not await self.bot.is_loaded(ctx.interaction):
             return
 
         await self.bot.profile_manager.user_menu(ctx.interaction)
