@@ -47,14 +47,15 @@ class WelcomeManager:
             "to use my commands!\n\n"
 
             f"__**{BotEmojis.Bartender} Venue Management {BotEmojis.Bartender}**__\n"
-            "Quickly get started by using the </venue profile:1399873580774330514> command.\n\n"
+            "Quickly get your venue imported by using the </venue profile:1399882951453311113> "
+            "command.\n\n"
 
             f"__**{BotEmojis.FlyingMoney} Staff Members {BotEmojis.FlyingMoney}**__\n"
             "Want to get started working for a venue? You can use the "
-            "</staff profile:1399873580774330513> command to create your profile.\n\n"
+            "</staff profile:1399882951453311109> command to create your profile.\n\n"
 
             f"__**{BotEmojis.MusicNote} DJs {BotEmojis.MusicNote}**__\n"
-            "Looking for gigs? Create a customized </dj profile:1399873580774330509> "
+            "Looking for gigs? Create a customized </dj profile:1399882951453311108> "
             "for everyone to see!\n\n"
 
             "For further details on what we're all about or how to get started, "
