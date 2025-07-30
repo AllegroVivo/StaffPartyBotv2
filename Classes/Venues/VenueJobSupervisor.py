@@ -156,17 +156,23 @@ class VenueJobSupervisor:
                 position_seen[pos] = position_seen.get(pos, 0) + 1
                 label = f"{pos} {position_seen[pos]}"
 
-            if j.timezone is None:
-                await j.get_tz(interaction)
-            assert j.timezone is not None, (
-                f"Job {j.id} ({j.position.proper_name}) has no timezone set."
-            )
+            has_tz = hasattr(j, "timezone")
+            if has_tz:
+                if j.timezone is not None:
+                    await j.get_tz(interaction)
+                assert j.timezone is not None, (
+                    f"Job {j.id} ({j.position.proper_name}) has no timezone set."
+                )
 
             options.append(
                 SelectOption(
                     label=label,
                     value=str(j.id),
-                    description=j.start_time.astimezone(j.timezone).strftime("%A, %B %d, %Y %I:%M %p")
+                    description=(
+                        j.start_time.astimezone(j.timezone).strftime("%A, %B %d, %Y %I:%M %p")
+                        if has_tz
+                        else None
+                    )
                 )
             )
 
