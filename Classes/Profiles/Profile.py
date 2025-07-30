@@ -130,7 +130,7 @@ class Profile(ManagedObject):
     @property
     def muted_venues(self) -> List[Venue]:
 
-        return [self.bot.venue_manager[vid] for vid in self._muted_venue_ids]
+        return [self.bot.venue_manager[vid] for vid in self._muted_venue_ids]  # type: ignore
 
 ################################################################################
     @property
@@ -215,7 +215,7 @@ class Profile(ManagedObject):
 
         return all([
             self._main_info._regions,
-            self._main_info._positions,
+            (self._main_info._positions or self._main_info._trainings),
             self._main_info._availability,
             self._main_info._name,
             self._main_info._rp_level,
@@ -448,7 +448,7 @@ class Profile(ManagedObject):
                     "filled out and try again:\n"
                     "- Name\n"
                     "- Availability\n"
-                    "- Employable Positions\n"
+                    "- Employable Positions -*or*- Desired Trainings\n"
                     "- Home Region(s)\n"
                     "- RP Preference\n"
                     "- Preferred Venue Tags"
