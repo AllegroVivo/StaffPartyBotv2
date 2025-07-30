@@ -165,17 +165,20 @@ class BGCheck:
         return U.make_embed(
             title="Background Check",
             description=(
+                "If you have no experience in a venue, please close this\n"
+                "message and select 'Desired Trainings' from the previous menu.\n\n"
+                
                 "__**Please read, and either agree or disagree to the "
                 "following:**__\n"
-                "*I confirm that the information I provide in this background\n"
-                "check is true and I also provide consent to the employees\n"
-                "of the Staff Party Bus to contact and verify my references.*\n\n"
+                "> *I confirm that the information I provide in this background\n"
+                "> check is true and I also provide consent to the employees\n"
+                "> of the Staff Party Bus to contact and verify my references.*\n\n"
 
                 "Please note that it is __**OKAY**__ to disagree with the above\n"
                 "statement. If you do, a staff member will contact you shortly.\n\n"
                 
-                "If you have never worked in a venue, you must receive training\n"
-                "to become qualified.\n"
+                "If you have never worked in a venue, you must receive training to\n"
+                "become qualified. If you've just received training, please list that!\n"
                 f"{U.draw_line(extra=36)}"
             ),
             fields=[
