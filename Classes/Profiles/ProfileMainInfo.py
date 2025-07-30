@@ -366,7 +366,8 @@ class ProfileMainInfo(ProfileSection):
     async def set_positions(self, interaction: Interaction) -> None:
 
         staff_role = await self.bot.role_manager.staff_main_role
-        if staff_role not in interaction.user.roles:
+        spb_member = self.bot.SPB_GUILD.get_member(interaction.user.id)
+        if spb_member is not None and staff_role not in spb_member.roles:
             bg_check = self.parent.bg_check
             if bg_check is None or not bg_check.approved:
                 if bg_check is None or not bg_check.is_submitted:
