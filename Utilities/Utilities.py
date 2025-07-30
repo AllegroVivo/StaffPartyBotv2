@@ -624,7 +624,7 @@ class Utilities:
                 except NotFound:
                     pass
             else:
-                image_url = await interaction.client.dump_image_cloudinary(message.attachments[0], view.value)  # type: ignore
+                image_url = await interaction.client.dump_image_cloudinary(message.attachments[0])  # type: ignore
 
             try:
                 await intermediate.delete()
