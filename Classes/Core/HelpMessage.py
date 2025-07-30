@@ -174,7 +174,7 @@ class HelpMessage:
 
                 "2. **Import your venue by creating your SPB venue profile.**\n"
                 "> Once you've created your venue on FFXIV Venues, you can "
-                "import it into Staff Party Bus with the </venue profile:1270412065600835611>. "
+                "import it into Staff Party Bus with the </venue profile:1399882951453311113>. "
                 "This will automatically populate your venue profile with the information you've "
                 "already provided.\n\n"
 
@@ -198,7 +198,7 @@ class HelpMessage:
     def venue_manager_page2() -> Page:
 
         embed = Embed(
-            title="__I can't use </venue profile:1399888918845067331>! What do I do?__",
+            title="__I can't use </venue profile:1399882951453311113>! What do I do?__",
             description=(
                 "If you're having trouble importing your venue, there are a "
                 "few things you can try to fix the issue:\n\n"
@@ -238,7 +238,7 @@ class HelpMessage:
                 "**'Update From FFXIV'** button on your SPB profile dashboard to update "
                 "venue listing immediately.\n\n"
 
-                "2. **Use the </venue profile:1399888918845067331> command**\n"
+                "2. **Use the </venue profile:1399882951453311113> command**\n"
                 "> This command will display your venue profile dashboard. "
                 "From here, you can make changes to your venue's other information "
                 "such as the RP Level, hiring status, and staff application URL."
@@ -275,7 +275,7 @@ class HelpMessage:
             description=(
                 "Posting a job offer is a simple process.\n\n"
 
-                "1. **Access your venue profile by using </venue profile:1399888918845067331>**\n\n"
+                "1. **Access your venue profile by using </venue profile:1399882951453311113>**\n\n"
 
                 "2. **Use the Temp/Perm Job management**\n"
                 "> This button will open a menu where you can create, modify and delete "
@@ -326,7 +326,7 @@ class HelpMessage:
             description=(
                 "Editing or canceling a job posting is a simple process.\n\n"
 
-                "1. **Access your venue profile by using </venue profile:1399888918845067331>**\n\n"
+                "1. **Access your venue profile by using </venue profile:1399882951453311113>**\n\n"
                 
                 "2. **Use the Temp/Perm Job management**\n"
                 "> This button will open a menu where you can create, "
@@ -368,7 +368,7 @@ class HelpMessage:
                 "you to complete a *VERY* short background check outlining your "
                 "work experience.\n\n"
 
-                "1. **Use the </staff profile:1399888918845067330> command**\n"
+                "1. **Use the </staff profile:1399882951453311109> command**\n"
                 "> This command will open your profile menu. You must navigate to  "
                 "the Main Info & Details subsection and select the Qualified Positions "
                 "button. This will prompt a background check.\n\n"
@@ -399,7 +399,7 @@ class HelpMessage:
             description=(
                 "Creating your staff profile is a simple process.\n\n"
 
-                "1. **Use the </staff profile:1397702667685466115> command**\n"
+                "1. **Use the </staff profile:1399882951453311109> command**\n"
                 "> This command will display a message with some buttons allowing "
                 "you to complete the staff profile creation process. This is a simple "
                 "process that requires only a few clicks and answers.\n\n"
@@ -510,7 +510,7 @@ class HelpMessage:
             title="__I have no work experience, but still want jobs!__",
             description=(
 
-                "1. **Use the </staff profile:1399888918845067330> command**\n"
+                "1. **Use the </staff profile:1399882951453311109> command**\n"
                 "> This command will display a message with some buttons allowing "
                 "you to complete the staff profile creation process. This is a simple "
                 "process that requires only a few clicks and answers.\n\n"
@@ -558,7 +558,7 @@ class HelpMessage:
             description=(
                 "Getting started with training in Staff Party Bus is a simple process.\n\n"
 
-                "1. **Use the </staff profile:1399888918845067330> command**\n"
+                "1. **Use the </staff profile:1399882951453311109> command**\n"
                 "> This command will display a message with some buttons allowing "
                 "you to complete the staff profile creation process. This is a simple "
                 "process that requires only a few clicks and answers.\n\n"
@@ -615,7 +615,7 @@ class HelpMessage:
 
                 "1. **Read the venue etiquette guide**\n"
                 "> Before your internships, you should read the venue "
-                "</etiquette:1399888918845067327> guide. This will give you an idea of "
+                "</etiquette:1399882951453311112> guide. This will give you an idea of "
                 "what to expect from the venue community.\n\n"
 
                 "2. **Talk with management**\n"
@@ -630,7 +630,7 @@ class HelpMessage:
 
                 "4. **Complete your internship**\n"
                 "> Once you feel you are qualified for this position,  "
-                "you can update the Qualified Positions in your </staff profile:1399888918845067330>. "
+                "you can update the Qualified Positions in your </staff profile:1399882951453311109>. "
             )
         )
 
