@@ -271,7 +271,7 @@ class Profile(ManagedObject):
             description += (
                 f"\n{U.draw_line(text=jobs)}\n"
                 f"{jobs}\n"
-                f"{U.draw_line(text=jobs)}\n"
+                f"{U.draw_line(text=jobs)}"
             )
         description += region_str
 
