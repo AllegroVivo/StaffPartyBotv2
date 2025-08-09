@@ -46,7 +46,7 @@ class LinkType(FroggeEnum):
 PATTERNS = [
     (
         LinkType.Carrd,
-        re.compile(r"^https?://(?:[\w-]+\.)*carrd\.co\S*$", flags=re.IGNORECASE)
+        re.compile(r"^https?://(?:[\w-]+\.)*(?:carrd|crd)\.co\S*$", flags=re.IGNORECASE)
     ),
     (
         LinkType.Discord,
