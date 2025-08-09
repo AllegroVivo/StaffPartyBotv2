@@ -17,6 +17,7 @@ from Classes.Services.ServicesManager import ServicesManager
 from Classes.Venues.VenueManager import VenueManager
 from Classes.Welcome.WelcomeManager import WelcomeManager
 from Classes.XIVVenues.XIVVenuesClient import XIVVenuesClient
+from Classes.Itinerary.ItineraryManager import ItineraryManager
 from Database.Database import Database
 from .ChannelManager import ChannelManager
 from .GuildManager import GuildManager
@@ -49,6 +50,7 @@ class StaffPartyBot(Bot):
         "_services_mgr",
         "_member_cache",
         "_loaded",
+        "_itinerary_mgr",
     )
 
     load_dotenv()
@@ -95,6 +97,7 @@ class StaffPartyBot(Bot):
         self._welcome_mgr: WelcomeManager = WelcomeManager(self)
         self._dj_mgr: DJManager = DJManager(self)
         self._services_mgr: ServicesManager = ServicesManager(self)
+        self._itinerary_mgr: ItineraryManager = ItineraryManager(self)
 
         self._loaded: bool = False
 
@@ -236,6 +239,12 @@ class StaffPartyBot(Bot):
     def services_manager(self) -> ServicesManager:
 
         return self._services_mgr
+
+################################################################################
+    @property
+    def itinerary_manager(self) -> ItineraryManager:
+
+        return self._itinerary_mgr
 
 ################################################################################
     async def is_loaded(self, interaction: Interaction) -> bool:

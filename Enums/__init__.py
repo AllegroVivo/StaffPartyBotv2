@@ -1,4 +1,5 @@
 from .ChannelPurpose import ChannelPurpose
+from .OpeningTag import OpeningTag
 from .Clan import Clan
 from .DataCenter import DataCenter
 from .GameWorld import GameWorld
@@ -10,6 +11,7 @@ from .LinkType import LinkType
 from .Minutes import Minutes
 from .Month import Month
 from .MusicGenre import MusicGenre
+from .OpeningStatus import OpeningStatus
 from .Orientation import Orientation
 from .Position import Position
 from .Pronoun import Pronoun
@@ -17,11 +19,11 @@ from .RPLevel import RPLevel
 from .Race import Race
 from .RoleType import RoleType
 from .Service import Service
+from .TimeType import TimeType
 from .Timezone import Timezone
 from .VenueTag import VenueTag
 from .Weekday import Weekday
 from .XIVIntervalType import XIVIntervalType
 from .XIVRegion import XIVRegion
 from ._Enum import FroggeEnum
-from .TimeType import TimeType
 ################################################################################

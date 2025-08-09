@@ -640,110 +640,109 @@ class DJProfile(ManagedObject):
 ################################################################################
     async def set_availability(self, interaction: Interaction) -> None:
 
-        if self._tz is None:
-            await self.set_timezone(interaction)
-            if self._tz is None:
-                return
-
-        prompt = U.make_embed(
-            title="Set Availability",
-            description="Please select the day you want to set availability for."
-        )
-        view = FroggeSelectView(interaction.user, Weekday.select_options())
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        weekday = Weekday(int(view.value))
-        assert self._tz is not None
-
-        prompt = U.make_embed(
-            title="Set Availability Start",
-            description=(
-                f"Please select the beginning of your availability "
-                f"for `{weekday.proper_name}`...\n\n"
-                
-                f"Times will be interpreted using the previously configured "
-                f"`{self._tz.key}` timezone."
-            )
-        )
-        view = TimeSelectView(interaction.user)
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        for i, a in enumerate(self._availability):
-            if a.day == weekday:
-                self._availability.pop(i).delete()
-                break
-
-        if view.value is Hours.Unavailable:
-            return
-
-        start_hour, start_minute = view.value
-
-        prompt = U.make_embed(
-            title="Set Availability End",
-            description=(
-                f"Please select the end of your availability "
-                f"for `{weekday.proper_name}`...\n\n"
-
-                f"Times will be interpreted using the previously configured "
-                f"`{self._tz.key}` timezone."
-            )
-        )
-        view = TimeSelectView(interaction.user, False)
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        end_hour, end_minute = view.value
-
-        # 1) Figure out a date in local time for the chosen weekday
-        #    This is optional, but if you want to handle the user picking e.g. "Wednesday"
-        #    and it's currently "Sunday" in their local TZ, find the next Wednesday, etc.
-        now_local = datetime.now(self._tz)
-        today_local = now_local.date()
-        # Python's datetime.weekday(): Monday=0..Sunday=6
-        current_wkday = now_local.weekday()
-        day_diff = (weekday.value - current_wkday) % 7
-        chosen_date_local = today_local + timedelta(days=day_diff)
-
-        # 2) Construct naive datetimes for the chosen date + user input hours/minutes
-        start_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
-                               start_hour, start_minute)
-        end_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
-                             end_hour, end_minute)
-
-        # 3) Attach the user’s time zone (i.e., interpret these naive datetimes as local time)
-        start_with_tz = start_naive.replace(tzinfo=self._tz)
-        end_with_tz   = end_naive.replace(tzinfo=self._tz)
-
-        # 4) Convert to UTC
-        start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
-        end_utc   = end_with_tz.astimezone(ZoneInfo("UTC"))
-
-        # 5) Store the UTC times
-        availability = DJAvailability.new(
-            self,
-            weekday,
-            start_utc.hour,
-            start_utc.minute,
-            end_utc.hour,
-            end_utc.minute
-        )
-        self._availability.append(availability)
-
-        await self.update_post_components()
+        pass
+        # if self._tz is None:
+        #     await self.set_timezone(interaction)
+        #     if self._tz is None:
+        #         return
+        #
+        # prompt = U.make_embed(
+        #     title="Set Availability",
+        #     description="Please select the day you want to set availability for."
+        # )
+        # view = FroggeSelectView(interaction.user, Weekday.select_options())
+        #
+        # await interaction.respond(embed=prompt, view=view)
+        # await view.wait()
+        #
+        # if not view.complete or view.value is False:
+        #     return
+        #
+        # weekday = Weekday(int(view.value))
+        # assert self._tz is not None
+        #
+        # prompt = U.make_embed(
+        #     title="Set Availability Start",
+        #     description=(
+        #         f"Please select the beginning of your availability "
+        #         f"for `{weekday.proper_name}`...\n\n"
+        #
+        #         f"Times will be interpreted using the previously configured "
+        #         f"`{self._tz.key}` timezone."
+        #     )
+        # )
+        # view = TimeSelectView(interaction.user)
+        #
+        # await interaction.respond(embed=prompt, view=view)
+        # await view.wait()
+        #
+        # if not view.complete or view.value is False:
+        #     return
+        #
+        # if view.value is Hours.Unavailable:
+        #     for i, a in enumerate(self._availability):
+        #         if a.day == weekday:
+        #             self._availability.pop(i).delete()
+        #     return
+        #
+        # start_hour, start_minute = view.value
+        #
+        # prompt = U.make_embed(
+        #     title="Set Availability End",
+        #     description=(
+        #         f"Please select the end of your availability "
+        #         f"for `{weekday.proper_name}`...\n\n"
+        #
+        #         f"Times will be interpreted using the previously configured "
+        #         f"`{self._tz.key}` timezone."
+        #     )
+        # )
+        # view = TimeSelectView(interaction.user, False)
+        #
+        # await interaction.respond(embed=prompt, view=view)
+        # await view.wait()
+        #
+        # if not view.complete or view.value is False:
+        #     return
+        #
+        # end_hour, end_minute = view.value
+        #
+        # # 1) Figure out a date in local time for the chosen weekday
+        # #    This is optional, but if you want to handle the user picking e.g. "Wednesday"
+        # #    and it's currently "Sunday" in their local TZ, find the next Wednesday, etc.
+        # now_local = datetime.now(self._tz)
+        # today_local = now_local.date()
+        # # Python's datetime.weekday(): Monday=0..Sunday=6
+        # current_wkday = now_local.weekday()
+        # day_diff = (weekday.value - current_wkday) % 7
+        # chosen_date_local = today_local + timedelta(days=day_diff)
+        #
+        # # 2) Construct naive datetimes for the chosen date + user input hours/minutes
+        # start_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
+        #                        start_hour, start_minute)
+        # end_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
+        #                      end_hour, end_minute)
+        #
+        # # 3) Attach the user’s time zone (i.e., interpret these naive datetimes as local time)
+        # start_with_tz = start_naive.replace(tzinfo=self._tz)
+        # end_with_tz   = end_naive.replace(tzinfo=self._tz)
+        #
+        # # 4) Convert to UTC
+        # start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
+        # end_utc   = end_with_tz.astimezone(ZoneInfo("UTC"))
+        #
+        # # 5) Store the UTC times
+        # availability = DJAvailability.new(
+        #     self,
+        #     weekday,
+        #     start_utc.hour,
+        #     start_utc.minute,
+        #     end_utc.hour,
+        #     end_utc.minute
+        # )
+        # self._availability.append(availability)
+        #
+        # await self.update_post_components()
 
 ################################################################################
     def is_complete(self) -> bool:

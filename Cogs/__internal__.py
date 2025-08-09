@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import time, UTC
 from discord import Cog
 from typing import TYPE_CHECKING, List
 from discord.ext import tasks
@@ -52,6 +53,12 @@ class Internal(Cog):
         await self.bot.jobs_manager.check_revisits()
 
         await self.bot.services_manager.check_revisits()
+
+################################################################################
+    @tasks.loop(minutes=15)
+    async def itinerary_runner(self) -> None:
+
+        await self.bot.itinerary_manager.venue_runner()
 
 ################################################################################
     @tasks.loop(hours=24)

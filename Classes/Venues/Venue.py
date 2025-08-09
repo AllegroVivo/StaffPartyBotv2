@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, UTC
 from typing import TYPE_CHECKING, TypeVar, List, Optional, Type, Dict, Any
 
 from discord import (
@@ -17,7 +18,7 @@ from discord import (
 
 from Assets import BotEmojis, BotImages
 from Classes.Common import ManagedObject, LazyUser, LazyMessage
-from Enums import RPLevel, Position
+from Enums import RPLevel, Position, Weekday
 from UI.Common import (
     FroggeView,
     FroggeSelectView,
@@ -942,5 +943,22 @@ class Venue(ManagedObject):
                 await manager.send(embed=notification)
             except:
                 pass
+
+################################################################################
+    def schedule_for(self, day: Weekday) -> Optional[VenueHours]:
+
+        for hours in self.schedule:
+            if hours._day == day:
+                return hours
+
+################################################################################
+    def will_open_within(self, delta: int) -> bool:
+
+        now = datetime.now(UTC)
+        for hours in self.schedule:
+            if hours.will_open_within(now, delta):
+                return True
+
+        return False
 
 ################################################################################
