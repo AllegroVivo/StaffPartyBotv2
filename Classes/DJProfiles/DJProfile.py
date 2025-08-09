@@ -350,15 +350,15 @@ class DJProfile(ManagedObject):
                     value=genres1,
                     inline=True
                 ),
-                EmbedField("** **", genres2 if genres2 != "`No Items`" else "", inline=True),
-                EmbedField("** **", genres3 if genres3 != "`No Items`" else "", inline=True),
+                EmbedField("** **", genres2 if genres2 != "`-`" else "", inline=True),
+                EmbedField("** **", genres3 if genres3 != "`-`" else "", inline=True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.GenericLinkIcon} __Links__ {BotEmojis.GenericLinkIcon}",
                     value=links1,
                     inline=True
                 ),
-                EmbedField("** **", links2 if links2 != "`No Items`" else "", True),
+                EmbedField("** **", links2 if links2 != "`-`" else "", True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.CalendarLogo} __Availability__ {BotEmojis.CalendarLogo}",
