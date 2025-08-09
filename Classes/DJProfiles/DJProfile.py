@@ -350,15 +350,15 @@ class DJProfile(ManagedObject):
                     value=genres1,
                     inline=True
                 ),
-                EmbedField("** **", genres2 if genres2 != "`No Items`" else "", inline=True),
-                EmbedField("** **", genres3 if genres3 != "`No Items`" else "", inline=True),
+                EmbedField("** **", genres2 if genres2 != "`-`" else "", inline=True),
+                EmbedField("** **", genres3 if genres3 != "`-`" else "", inline=True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.GenericLinkIcon} __Links__ {BotEmojis.GenericLinkIcon}",
                     value=links1,
                     inline=True
                 ),
-                EmbedField("** **", links2 if links2 != "`No Items`" else "", True),
+                EmbedField("** **", links2 if links2 != "`-`" else "", True),
                 EmbedField(U.draw_line(extra=15), "", inline=False),
                 EmbedField(
                     name=f"{BotEmojis.CalendarLogo} __Availability__ {BotEmojis.CalendarLogo}",
@@ -416,7 +416,7 @@ class DJProfile(ManagedObject):
         main_profile = U.make_embed(
             title=self.name,
             description=dm_text,
-            color=self.color,
+            color=self.color if self.color else FroggeColor.embed_background(),
             fields=[
 
                 EmbedField(
@@ -458,12 +458,12 @@ class DJProfile(ManagedObject):
         availability = U.make_embed(
             title=f"{self.name}'s Availability",
             description=DJAvailability.long_availability_status(self.availability),
-            color=self.color,
+            color=self.color if self.color else FroggeColor.embed_background(),
             footer_text=self.links.twitch_link,
         )
 
         aboutme = U.make_embed(
-            color=self.color,
+            color=self.color if self.color else FroggeColor.embed_background(),
             title=f"About {self.name}",
             description=self.aboutme,
             footer_text=self.links.twitch_link,

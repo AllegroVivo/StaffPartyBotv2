@@ -253,7 +253,11 @@ class ProfileMainInfo(ProfileSection):
                 ),
                 EmbedField(
                     name="__Preferred Venue Tags__",
-                    value=U.split_lines([f"`{t.proper_name}`" for t in self._tags], 30),
+                    value=(
+                        U.split_lines([f"`{t.proper_name}`" for t in self._tags], 30)
+                        if self._tags
+                        else "`Not Set`"
+                    ),
                     inline=True
                 ),
                 EmbedField(
@@ -291,12 +295,12 @@ class ProfileMainInfo(ProfileSection):
         Tuple[str, str, Embed, bool]
         """
 
-        region_str = f"{BotEmojis.World} __**Home Region(s)**__ {BotEmojis.World} \n"
+        region_str = f"\n{BotEmojis.World} __**Home Region(s)**__ {BotEmojis.World} \n"
         if self.regions:
             combined = "/".join([region.proper_name for region in self.regions])
             region_str += f"{combined}\n"
         else:
-            region_str += "`Not Set`"
+            region_str += "`Not Set`\n"
 
         def get_pos_str(positions: List[Position]) -> str:
             return "\n".join(

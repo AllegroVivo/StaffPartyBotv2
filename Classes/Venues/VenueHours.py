@@ -219,6 +219,8 @@ class VenueHours(Identifiable):
 
         if self._interval_type == XIVIntervalType.EveryXWeeks:
             # e.g. "Every 2 weeks on Tuesday: 10:00 AM - 2:00 PM"
+            if self._interval_arg == 1:
+                return f"Every week on {day_name}: {open_str} - {close_str}"
             return (
                 f"Every {self._interval_arg} week(s) on {day_name}: "
                 f"{open_str} - {close_str}"
