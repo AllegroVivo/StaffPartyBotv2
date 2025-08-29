@@ -50,7 +50,7 @@ class DatabaseLoader:
                 selectinload(TopLevelDataModel.profiles).selectinload(StaffProfileModel.availability),
                 selectinload(TopLevelDataModel.temporary_jobs),
                 selectinload(TopLevelDataModel.permanent_jobs),
-                selectinload(TopLevelDataModel.dj_profiles),
+                selectinload(TopLevelDataModel.dj_profiles).selectinload(DJProfileModel.availability),
             ).first()
 
             def map_schema(schema: Type[T], objects: List[Any]) -> List[T]:

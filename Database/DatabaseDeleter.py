@@ -82,7 +82,7 @@ class DatabaseDeleter:
 ################################################################################
     def dj_profile_availability(self, avail_id: int) -> None:
 
-        self._delete_record(Models.DJProfileAvailabilityModel, avail_id)
+        self._delete_record(Models.DJProfileAvailabilityRangeModel, avail_id)
 
 ################################################################################
     def special_event(self, event_id: int) -> None:

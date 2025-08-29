@@ -14,7 +14,7 @@ from discord import (
     Message,
     ForumTag,
     HTTPException,
-    NotFound
+    NotFound, SelectOption
 )
 from discord.utils import MISSING
 
@@ -660,17 +660,35 @@ class DJProfile(ManagedObject):
         weekday = Weekday(int(view.value))
         assert self._tz is not None
 
+        existing = [a for a in self._availability if a.weekday == weekday]
+        preselected = set()
+        for a in existing:
+            # existing ranges already stored as local minutes
+            for h in range(a.start_min_local // 60, a.end_min_local // 60):
+                preselected.add(h)
+
+        options = [SelectOption(label="Unavailable", value=str(Hours.Unavailable.value), default=(not preselected))]
+        for h in range(24):
+            label = f"{h:02d}:00 – {h + 1:02d}:00"
+            options.append(
+                SelectOption(
+                    label=label,
+                    value=str(h),
+                    default=(h in preselected)
+                )
+            )
+
         prompt = U.make_embed(
-            title="Set Availability Start",
+            title=f"Set Availability for {weekday.proper_name}",
             description=(
-                f"Please select the beginning of your availability "
+                f"Please select the hours of your availability "
                 f"for `{weekday.proper_name}`...\n\n"
-                
+
                 f"Times will be interpreted using the previously configured "
                 f"`{self._tz.key}` timezone."
             )
         )
-        view = TimeSelectView(interaction.user)
+        view = FroggeSelectView(interaction.user, options, multi_select=True)
 
         await interaction.respond(embed=prompt, view=view)
         await view.wait()
@@ -678,74 +696,61 @@ class DJProfile(ManagedObject):
         if not view.complete or view.value is False:
             return
 
-        for i, a in enumerate(self._availability):
-            if a.day == weekday:
-                self._availability.pop(i).delete()
-                break
+        def _delete_all_for_weekday() -> None:
+            for a in list(self._availability):
+                if a.weekday == weekday:
+                    self._availability.remove(a)
+                    a.delete()
 
-        if view.value is Hours.Unavailable:
+        if str(Hours.Unavailable.value) in view.value:
+            if len(view.value) > 1:
+                error = U.make_error(
+                    title="Invalid Selection",
+                    message=(
+                        "You cannot select `Unavailable` along with other hours. "
+                        "Please try again."
+                    ),
+                    solution="Select either `Unavailable` or specific hours, but not both."
+                )
+                await interaction.respond(embed=error, ephemeral=True)
+                return
+
+            _delete_all_for_weekday()
             return
 
-        start_hour, start_minute = view.value
+        selected = sorted({int(v) for v in (view.value or [])})
+        new_ranges = self._merge_hour_blocks_to_ranges(selected)
 
-        prompt = U.make_embed(
-            title="Set Availability End",
-            description=(
-                f"Please select the end of your availability "
-                f"for `{weekday.proper_name}`...\n\n"
+        _delete_all_for_weekday()
 
-                f"Times will be interpreted using the previously configured "
-                f"`{self._tz.key}` timezone."
-            )
-        )
-        view = TimeSelectView(interaction.user, False)
-
-        await interaction.respond(embed=prompt, view=view)
-        await view.wait()
-
-        if not view.complete or view.value is False:
-            return
-
-        end_hour, end_minute = view.value
-
-        # 1) Figure out a date in local time for the chosen weekday
-        #    This is optional, but if you want to handle the user picking e.g. "Wednesday"
-        #    and it's currently "Sunday" in their local TZ, find the next Wednesday, etc.
-        now_local = datetime.now(self._tz)
-        today_local = now_local.date()
-        # Python's datetime.weekday(): Monday=0..Sunday=6
-        current_wkday = now_local.weekday()
-        day_diff = (weekday.value - current_wkday) % 7
-        chosen_date_local = today_local + timedelta(days=day_diff)
-
-        # 2) Construct naive datetimes for the chosen date + user input hours/minutes
-        start_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
-                               start_hour, start_minute)
-        end_naive = datetime(chosen_date_local.year, chosen_date_local.month, chosen_date_local.day,
-                             end_hour, end_minute)
-
-        # 3) Attach the user’s time zone (i.e., interpret these naive datetimes as local time)
-        start_with_tz = start_naive.replace(tzinfo=self._tz)
-        end_with_tz   = end_naive.replace(tzinfo=self._tz)
-
-        # 4) Convert to UTC
-        start_utc = start_with_tz.astimezone(ZoneInfo("UTC"))
-        end_utc   = end_with_tz.astimezone(ZoneInfo("UTC"))
-
-        # 5) Store the UTC times
-        availability = DJAvailability.new(
-            self,
-            weekday,
-            start_utc.hour,
-            start_utc.minute,
-            end_utc.hour,
-            end_utc.minute
-        )
-        self._availability.append(availability)
+        for start_min, end_min in new_ranges:
+            availability = DJAvailability.new_range(self, weekday, start_min, end_min)
+            self._availability.append(availability)
 
         await self.update_post_components()
 
 ################################################################################
+    @staticmethod
+    def _merge_hour_blocks_to_ranges(hours: List[int]) -> List[Tuple[int, int]]:
+        """Return [(start_min_local, end_min_local)] as half-open ranges in minutes."""
+
+        if not hours:
+            return []
+
+        hours = sorted(set(hours))
+        ranges = []
+        s = prev = hours[0]
+
+        for h in hours[1:]:
+            if h != prev + 1:
+                ranges.append((s * 60, (prev + 1) * 60))
+                s = h
+            prev = h
+
+        ranges.append((s * 60, (prev + 1) * 60))
+        return ranges
+
+    ################################################################################
     def is_complete(self) -> bool:
 
         return all([
