@@ -13,9 +13,11 @@ __all__ = (
 class DJAvailabilitySchema(BaseModel):
 
     id: int
-    weekday: int
-    start_min_local: int
-    end_min_local: int
+    day: int
+    start_hour: int
+    start_minute: int
+    end_hour: int
+    end_minute: int
 
     class Config:
         from_attributes = True

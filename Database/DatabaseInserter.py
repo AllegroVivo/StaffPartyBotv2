@@ -248,18 +248,22 @@ class DatabaseInserter:
     def dj_availability(
         self,
         profile_id: int,
-        weekday: int,
-        start_min_local: int,
-        end_min_local: int,
+        day: int,
+        start_hour: int,
+        start_minute: int,
+        end_hour: int,
+        end_minute: int
     ) -> Dict[str, Any]:
 
         with self._parent._get_db() as db:
             try:
-                new_avail = DJProfileAvailabilityRangeModel(
+                new_avail = DJProfileAvailabilityModel(
                     profile_id=profile_id,
-                    weekday=weekday,
-                    start_min_local=start_min_local,
-                    end_min_local=end_min_local
+                    day=day,
+                    start_hour=start_hour,
+                    start_minute=start_minute,
+                    end_hour=end_hour,
+                    end_minute=end_minute
                 )
                 db.add(new_avail)
                 db.commit()
