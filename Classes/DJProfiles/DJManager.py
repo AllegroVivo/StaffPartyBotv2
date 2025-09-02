@@ -30,7 +30,7 @@ class DJManager(ObjectManager):
     async def finalize_load(self) -> None:
 
         for profile in self.profiles:
-            await profile.update_post_components()
+            await profile.update_post_components(update_embeds=False)
 
 ################################################################################
     def __getitem__(self, user_id: int) -> Optional[DJProfile]:

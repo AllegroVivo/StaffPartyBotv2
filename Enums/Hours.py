@@ -6,7 +6,7 @@ from ._Enum import FroggeEnum
 ################################################################################
 class Hours(FroggeEnum):
 
-    Unavailable = -1
+    Unavailable = -2  # (So we don't conflict with FroggeSelect's auto-disable functionality)
     TwelveAM = 0
     OneAM = 1
     TwoAM = 2

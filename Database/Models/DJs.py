@@ -4,20 +4,18 @@ from sqlalchemy.orm import relationship
 from .Base import Base
 ################################################################################
 
-__all__ = ("DJProfileModel", "DJProfileAvailabilityModel")
+__all__ = ("DJProfileModel", "DJProfileAvailabilityRangeModel")
 
 ################################################################################
-class DJProfileAvailabilityModel(Base):
+class DJProfileAvailabilityRangeModel(Base):
 
-    __tablename__ = "dj_profile_availabilities"
+    __tablename__ = "dj_profile_availability_ranges"
 
     id = Column(Integer, primary_key=True)
     profile_id = Column(BigInteger, ForeignKey("dj_profiles.user_id", name="dj_profile_availability_dj_profiles_fkey", ondelete="CASCADE"), nullable=False)
-    day = Column(Integer, nullable=False)
-    start_hour = Column(Integer, nullable=False)
-    start_minute = Column(Integer, nullable=False)
-    end_hour = Column(Integer, nullable=False)
-    end_minute = Column(Integer, nullable=False)
+    weekday = Column(Integer, nullable=False)
+    start_min_local = Column(Integer, nullable=False)  # Minutes from midnight
+    end_min_local = Column(Integer, nullable=False)    # Minutes from midnight
 
     # Relationships
     profile = relationship("DJProfileModel", back_populates="availability", passive_deletes=True)
@@ -45,6 +43,6 @@ class DJProfileModel(Base):
 
     # Relationships
     top_level = relationship("TopLevelDataModel", back_populates="dj_profiles")
-    availability = relationship("DJProfileAvailabilityModel", back_populates="profile", passive_deletes=True)
+    availability = relationship("DJProfileAvailabilityRangeModel", back_populates="profile", passive_deletes=True)
 
 ################################################################################
