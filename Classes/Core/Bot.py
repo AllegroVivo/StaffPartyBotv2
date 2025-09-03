@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import TYPE_CHECKING, Optional, Union, List
 
 import cloudinary
 import cloudinary.uploader
-from discord import Bot, Attachment, Guild, NotFound, Member, User, Message, Interaction
+from datetime import datetime
+from discord import Bot, Attachment, Guild, NotFound, Member, User, Message, Interaction, Role
 from discord.abc import GuildChannel
 from dotenv import load_dotenv
 
@@ -379,5 +381,33 @@ class StaffPartyBot(Bot):
     def clear_member_cache(self) -> None:
 
         self._member_cache = []
+
+################################################################################
+    async def burst_message(self, interaction: Interaction, file: Attachment, role: Role) -> None:
+
+        await interaction.response.defer(invisible=False)
+
+        started = datetime.now()
+        bytes_data = await file.read()
+        alyahs_message = bytes_data.decode("utf-8")
+
+        members = [m for m in interaction.guild.members if role in m.roles and not m.bot]
+        count = 0
+        for member in members:
+            try:
+                await member.send(alyahs_message)
+                count += 1
+                await asyncio.sleep(1.5)  # throttle per DM
+            except Exception as e:
+                await interaction.respond(f"Failed to send burst message to {member} ({member.id}): {e}")
+
+        ended = datetime.now()
+        delta = ended - started
+        print(f"Burst message sent to {count} members with the role {role.name} in {delta.total_seconds()} seconds.")
+
+        await interaction.respond(
+            f"Burst message complete! "
+            f"Sent to {count} members with the role {role.mention} in {delta.total_seconds()} seconds."
+        )
 
 ################################################################################

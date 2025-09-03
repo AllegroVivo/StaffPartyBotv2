@@ -8,7 +8,7 @@ from discord import (
     SlashCommandOptionType,
     InteractionContextType,
     ChannelType,
-    OptionChoice
+    OptionChoice,
 )
 
 if TYPE_CHECKING:
@@ -93,6 +93,33 @@ class Admin(Cog):
             return
 
         await self.bot.bg_check_manager.staff_experience(ctx.interaction, user)
+
+################################################################################
+    @admin.command(
+        name="burst_message",
+        description="Send a DM message to all server members with the given role(s)."
+    )
+    async def burst_message(
+        self,
+        ctx: ApplicationContext,
+        text: Option(
+            SlashCommandOptionType.attachment,
+            name="text_file",
+            description="A text file containing the message to send.",
+            required=True
+        ),
+        role: Option(
+            SlashCommandOptionType.role,
+            name="role",
+            description="The role to send the message to.",
+            required=True,
+        )
+    ):
+
+        if not await self.bot.is_loaded(ctx.interaction):
+            return
+
+        await self.bot.burst_message(ctx.interaction, text, role)
 
 ################################################################################
 def setup(bot: "StaffPartyBot") -> None:
